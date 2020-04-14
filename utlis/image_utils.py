@@ -8,12 +8,13 @@ from segmentizer import Segmentizer
 from skimage.filters import gaussian
 
 
-def load_image(name, path = './data/Cube+', directory='CR2_1_100', mask_cube=True):
+def load_image(name, path = './data/Cube+', directory='CR2_1_100', mask_cube=True, depth=8):
     image = f"{path}/{directory}"
     image_path = os.path.join(image, name)
 
     raw = rawpy.imread(image_path)  # access to the RAW image
-    rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True, output_bps=16)  # a numpy RGB array
+    # rgb = raw.postprocess()  # a numpy RGB array
+    rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True, output_bps=depth)  # a numpy RGB array
 
     if mask_cube:
         for i in range(2000, rgb.shape[0]):
@@ -61,7 +62,7 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         break
 
     result = cv2.bitwise_and(original, blank_mask)
-    return result, gaussian(blank_mask, 11)
+    return result, gaussian(blank_mask, 3)
 
 
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):
@@ -69,7 +70,7 @@ def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):
         ill = ill1 * mask + ill2 * (1 - mask)
         return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
-    ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
+    # ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
 
     return np.array([
         np.array([
@@ -82,5 +83,5 @@ def color_correct_single(img, u_ill, c_ill=1 / 3.):
     def correct_pixel(p, ill):
         return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
-    # u_ill = u_ill / np.linalg.norm(u_ill)
+    u_ill = u_ill / np.linalg.norm(u_ill)
     return np.array([np.array([correct_pixel(p, c_ill / u_ill) for p in row]) for row in img], dtype=np.uint8)
