@@ -6,6 +6,9 @@ import numpy as np
 from segmentizer import Segmentizer
 
 from skimage.filters import gaussian
+from scipy.interpolate import splprep, splev
+
+from utlis.plotting_utils import visualize
 
 
 def load_image(name, path = './data/Cube+', directory='CR2_1_100', mask_cube=True, depth=8):
@@ -63,24 +66,44 @@ def adjust_gamma(image, gamma=1.0):
     return cv2.LUT(image, table)
 
 
-def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255])):
+def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1):
     image = image.astype(np.uint8)
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
     original = image.copy()
-    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
-    # lower = np.array([18, 42, 69])
-    # upper = np.array([179, 255, 255])
-    mask = cv2.inRange(image, lower, upper)
 
-    cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
-    for c in cnts:
-        cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
-        break
+    if method == 1:
+        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
+        # lower = np.array([18, 42, 69])
+        # upper = np.array([179, 255, 255])
+        mask = cv2.inRange(hsv, lower, upper)
 
-    result = cv2.bitwise_and(original, blank_mask)
-    return result, gaussian(blank_mask, 3)
+        cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
+        for c in cnts:
+            cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
+            break
+
+        result = cv2.bitwise_and(original, blank_mask)
+        return result, gaussian(blank_mask, 3)
+    else:
+        rMaskgray = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)[:, :, 0]
+        (thresh, binRed) = cv2.threshold(rMaskgray, 100, 255, cv2.THRESH_BINARY_INV)
+        kernel = np.ones((1, 4), np.uint8)
+        erosion = cv2.erode(binRed, kernel, iterations=10)
+        eroison = 255 - erosion
+        kernel = np.ones((4, 1), np.uint8)
+        erosion = cv2.erode(eroison, kernel, iterations=5)
+        visualize([image, rMaskgray, eroison, erosion])
+        Rcontours, hier_r = cv2.findContours(erosion, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        Rcontours = sorted(Rcontours, key=cv2.contourArea, reverse=True)
+        for c in Rcontours:
+            if cv2.contourArea(c) > 9000:
+                cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
+                break
+
+        result = cv2.bitwise_and(original, blank_mask)
+        return result, gaussian(blank_mask, 3)
 
 
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):

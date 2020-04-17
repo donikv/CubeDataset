@@ -58,7 +58,7 @@ def get_diff_in_ill(image):
     return diff
 
 
-def process_and_visualize(image, idx, title=None, process_raw=True, draw=True):
+def process_and_visualize(image, idx, title=None, process_raw=True, draw=True, method=1):
     height, width, _ = image.shape
     image = cv2.resize(image, (int(width / 10), int(height / 10)))
     original = image.copy()
@@ -69,7 +69,7 @@ def process_and_visualize(image, idx, title=None, process_raw=True, draw=True):
     # rgb = img
     gt = gts[idx - 1]
     corrected = color_correct_single(image, gt, 1)
-    foreground, mask = cv2_contours(corrected, upper=np.array([100, 255, 255]))
+    foreground, mask = cv2_contours(corrected, upper=np.array([100, 255, 255]), method=method)
     # ill1 = np.random.uniform(0, 1, 3)
     # ill2 = np.random.uniform(0, 1, 3)
     ill1, ill2 = random_colors()
@@ -81,7 +81,7 @@ def process_and_visualize(image, idx, title=None, process_raw=True, draw=True):
         visualize([image, corrected, relighted, colored_mask], title=title)
     return relighted, colored_mask, ill1, ill2
 
-
+save = False
 if __name__ == '__main__':
     # pickle.dump([], open('./data/misc/illumination_diffs.pickle', 'wb'))
     # pickle.dump(np.zeros(1), open('./data/misc/illumination_diffs.pickle', 'wb'))
@@ -98,13 +98,13 @@ if __name__ == '__main__':
     np.random.shuffle(imgs)
     i = 0
     for img in imgs:
-        i += 1
         image = load(img, folder_step, depth=16)
-        for j in range(3):
-            relighted, mask, ill1, ill2 = process_and_visualize(image, img, process_raw=use_raw, title=img, draw=False)
-            cv2.imwrite(f'./data/relighted/images/{i}.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt/{i}.png', cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+        for j in range(2):
             i += 1
+            relighted, mask, ill1, ill2 = process_and_visualize(image, img, process_raw=use_raw, title=img, draw=True, method=j)
+            if save:
+                cv2.imwrite(f'./data/relighted/images/{img}-{i}.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+                cv2.imwrite(f'./data/relighted/gt/{img}-{i}.png', cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
 
     gt_diff_filter = get_ill_diffs()
     for idx in gt_diff_filter:
