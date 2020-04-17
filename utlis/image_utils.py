@@ -24,6 +24,22 @@ def load_image(name, path = './data/Cube+', directory='CR2_1_100', mask_cube=Tru
     return rgb
 
 
+def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True):
+    image = f"{path}/{directory}"
+    image_path = os.path.join(image, name)
+
+    img = cv2.imread(image_path, cv2.COLOR_BGR2RGB)
+    r, g, b = cv2.split(img)
+    rgb = np.dstack((b, g, r))
+
+    if mask_cube:
+        for i in range(2000, rgb.shape[0]):
+            for j in range(4000, rgb.shape[1]):
+                rgb[i][j] = np.zeros(3)
+
+    return rgb
+
+
 def process_image(img: np.ndarray):
     blacklevel = 2048
     saturationLevel = img.max() - 2
@@ -36,14 +52,16 @@ def process_image(img: np.ndarray):
 
     return (result / saturationLevel * 255).astype(np.uint8)
 
-def segment(img: np.ndarray):
-    if len(img.shape) < 3:
-        img = np.array([[[pixel, pixel, pixel] for pixel in row] for row in img])
-    height, width, _ = img.shape
-    segmentizer = Segmentizer(width, height)
-    segmented_img = segmentizer.fit_and_predict(img)
 
-    return segmented_img
+def adjust_gamma(image, gamma=1.0):
+    # build a lookup table mapping the pixel values [0, 255] to
+    # their adjusted gamma values
+    invGamma = 1.0 / gamma
+    table = np.array([((i / 255.0) ** invGamma) * 255
+                      for i in np.arange(0, 256)]).astype("uint8")
+    # apply gamma correction using the lookup table
+    return cv2.LUT(image, table)
+
 
 def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255])):
     image = image.astype(np.uint8)
