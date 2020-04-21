@@ -66,44 +66,40 @@ def adjust_gamma(image, gamma=1.0):
     return cv2.LUT(image, table)
 
 
-def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1):
+def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False):
     image = image.astype(np.uint8)
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
     original = image.copy()
-
+    mask = None
     if method == 1:
-        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
-        # lower = np.array([18, 42, 69])
-        # upper = np.array([179, 255, 255])
-        mask = cv2.inRange(hsv, lower, upper)
-
-        cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-        cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
-        for c in cnts:
-            cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
-            break
-
-        result = cv2.bitwise_and(original, blank_mask)
-        return result, gaussian(blank_mask, 3)
+        im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        (thresh, mask) = cv2.threshold(im_bw, lower[0], upper[0], 0)
     else:
-        rMaskgray = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)[:, :, 0]
-        (thresh, binRed) = cv2.threshold(rMaskgray, 100, 255, cv2.THRESH_BINARY_INV)
-        kernel = np.ones((1, 4), np.uint8)
-        erosion = cv2.erode(binRed, kernel, iterations=10)
-        eroison = 255 - erosion
-        kernel = np.ones((4, 1), np.uint8)
-        erosion = cv2.erode(eroison, kernel, iterations=5)
-        visualize([image, rMaskgray, eroison, erosion])
-        Rcontours, hier_r = cv2.findContours(erosion, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        Rcontours = sorted(Rcontours, key=cv2.contourArea, reverse=True)
-        for c in Rcontours:
-            if cv2.contourArea(c) > 9000:
-                cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
-                break
+        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
+        mask = cv2.inRange(hsv, lower, upper)
+    mask = cv2.blur(mask, (5, 5))  # blur the image
+    kernel = np.ones((1, 2), np.uint8)
+    erosion = cv2.erode(mask, kernel, iterations=10)
+    eroison = 255 - erosion
+    kernel = np.ones((2, 1), np.uint8)
+    erosion = cv2.erode(eroison, kernel, iterations=5)
+    if invert:
+        erosion = 255 - erosion
 
-        result = cv2.bitwise_and(original, blank_mask)
-        return result, gaussian(blank_mask, 3)
+    cnts = cv2.findContours(erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
+    blank_mask1 = np.zeros(image.shape, dtype=np.uint8)
+    for c in cnts:
+        # creating convex hull object for each contour
+        cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
+        h = (cv2.convexHull(c, False))
+        cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
+        break
+    res_mask = blank_mask1
+    # visualize([image, blank_mask, blank_mask1])
+    result = cv2.bitwise_and(original, res_mask)
+    return result, gaussian(res_mask, 3)
 
 
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):
@@ -124,5 +120,5 @@ def color_correct_single(img, u_ill, c_ill=1 / 3.):
     def correct_pixel(p, ill):
         return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
-    u_ill = u_ill / np.linalg.norm(u_ill)
+    # u_ill = u_ill / np.linalg.norm(u_ill)
     return np.array([np.array([correct_pixel(p, c_ill / u_ill) for p in row]) for row in img], dtype=np.uint8)

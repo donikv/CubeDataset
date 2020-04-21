@@ -58,7 +58,7 @@ def get_diff_in_ill(image):
     return diff
 
 
-def process_and_visualize(image, idx, title=None, process_raw=True, draw=True, method=1):
+def process_and_visualize(image, idx, title=None, process_raw=True, draw=True, method=1, invert=False):
     height, width, _ = image.shape
     image = cv2.resize(image, (int(width / 10), int(height / 10)))
     original = image.copy()
@@ -69,19 +69,20 @@ def process_and_visualize(image, idx, title=None, process_raw=True, draw=True, m
     # rgb = img
     gt = gts[idx - 1]
     corrected = color_correct_single(image, gt, 1)
-    foreground, mask = cv2_contours(corrected, upper=np.array([100, 255, 255]), method=method)
+    foreground, mask = cv2_contours(corrected, upper=np.array([100, 255, 255]), method=method, invert=invert)
     # ill1 = np.random.uniform(0, 1, 3)
     # ill2 = np.random.uniform(0, 1, 3)
     ill1, ill2 = random_colors()
     relighted = color_correct(image, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
-                              c_ill=2)
+                              c_ill=1)
+    relighted = adjust_gamma(relighted, 1.5)
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
     if draw:
         visualize([image, corrected, relighted, colored_mask], title=title)
     return relighted, colored_mask, ill1, ill2
 
-save = False
+save = True
 if __name__ == '__main__':
     # pickle.dump([], open('./data/misc/illumination_diffs.pickle', 'wb'))
     # pickle.dump(np.zeros(1), open('./data/misc/illumination_diffs.pickle', 'wb'))
@@ -95,19 +96,17 @@ if __name__ == '__main__':
     possible = np.loadtxt('./data/misc/Possible_exclusions.txt').astype(int)
     exclusions = np.append(exclusions, possible)
     imgs = np.array(list(filter(lambda x: x not in exclusions, imgs)))
-    np.random.shuffle(imgs)
+    # np.random.shuffle(imgs)
     i = 0
     for img in imgs:
         image = load(img, folder_step, depth=16)
         for j in range(2):
-            i += 1
-            relighted, mask, ill1, ill2 = process_and_visualize(image, img, process_raw=use_raw, title=img, draw=True, method=j)
+            relighted, mask, ill1, ill2 = process_and_visualize(image, img, process_raw=use_raw, title=img, draw=True, method=0, invert=bool(j%2))
             if save:
-                cv2.imwrite(f'./data/relighted/images/{img}-{i}.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-                cv2.imwrite(f'./data/relighted/gt/{img}-{i}.png', cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+                inv = ''
+                if j%2 == 1:
+                    inv = '-inv'
+                cv2.imwrite(f'./data/relighted/images/{img}{inv}-gray.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+                cv2.imwrite(f'./data/relighted/gt/{img}{inv}-gray.png', cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
 
-    gt_diff_filter = get_ill_diffs()
-    for idx in gt_diff_filter:
-        rgb = load(idx)
-        rgb_masked = load(idx, mask_cube=True)
 
