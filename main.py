@@ -4,8 +4,8 @@ import rawpy
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
-from utlis.image_utils import load_image, color_correct, cv2_contours, color_correct_single, process_image, load_png, \
+from utlis.file_utils import load_image, load_png, load
+from utlis.image_utils import color_correct, cv2_contours, color_correct_single, process_image, \
     adjust_gamma
 from utlis.plotting_utils import visualize, plot_counturs
 from utlis.groundtruth_utils import GroundtruthLoader
@@ -35,22 +35,6 @@ def get_ill_diffs():
 use_raw = True
 folder_step = 200 if not use_raw else 100
 
-
-def load(index, folder_step=100, mask_cube=False, depth=8):
-    start = int((index - 1) / folder_step) * folder_step + 1
-    end = min(int((index - 1) / folder_step) * folder_step + folder_step, 1707)
-    print(start, end, index)
-    if folder_step == 100:
-        folder = f'CR2_{start}_{end}'
-        rgb = load_image(f"{index}.CR2", directory=folder, mask_cube=mask_cube,
-                         depth=depth)
-        return rgb
-    else:
-        folder = f'PNG_{start}_{end}'
-        rgb = load_png(f"{index}.png", directory=folder, mask_cube=mask_cube)
-        return rgb
-
-
 def get_diff_in_ill(image):
     image = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
     image = image[:, :, 0]
@@ -75,14 +59,14 @@ def process_and_visualize(image, idx, title=None, process_raw=True, draw=True, m
     ill1, ill2 = random_colors()
     relighted = color_correct(image, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
                               c_ill=1)
-    relighted = adjust_gamma(relighted, 1.5)
+    # relighted = adjust_gamma(relighted, 1.5)
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
     if draw:
         visualize([image, corrected, relighted, colored_mask], title=title)
     return relighted, colored_mask, ill1, ill2
 
-save = True
+save = False
 if __name__ == '__main__':
     # pickle.dump([], open('./data/misc/illumination_diffs.pickle', 'wb'))
     # pickle.dump(np.zeros(1), open('./data/misc/illumination_diffs.pickle', 'wb'))

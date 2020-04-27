@@ -54,6 +54,7 @@ def random_colors():
                            blue=xyz_from_xy(0.15, 0.06),
                            white=illuminant_D65)
     c1, c2 = cs_hdtv.spec_to_rgb(spec1), cs_hdtv.spec_to_rgb(spec2)
+    c1, c2 = np.clip(c1, a_min=1/255, a_max=254/255), np.clip(c2, a_min=1/255, a_max=254/255)
     return c1, c2
 
 

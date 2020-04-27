@@ -1,49 +1,11 @@
-import os
-
 import cv2
-import rawpy
 import numpy as np
-from segmentizer import Segmentizer
 
 from skimage.filters import gaussian
-from scipy.interpolate import splprep, splev
 
 from utlis.plotting_utils import visualize
 
-
-def load_image(name, path = './data/Cube+', directory='CR2_1_100', mask_cube=True, depth=8):
-    image = f"{path}/{directory}"
-    image_path = os.path.join(image, name)
-
-    raw = rawpy.imread(image_path)  # access to the RAW image
-    # rgb = raw.postprocess()  # a numpy RGB array
-    rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True, output_bps=depth)  # a numpy RGB array
-
-    if mask_cube:
-        for i in range(2000, rgb.shape[0]):
-            for j in range(4000, rgb.shape[1]):
-                rgb[i][j] = np.zeros(3)
-
-    return rgb
-
-
-def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True):
-    image = f"{path}/{directory}"
-    image_path = os.path.join(image, name)
-
-    img = cv2.imread(image_path, cv2.COLOR_BGR2RGB)
-    r, g, b = cv2.split(img)
-    rgb = np.dstack((b, g, r))
-
-    if mask_cube:
-        for i in range(2000, rgb.shape[0]):
-            for j in range(4000, rgb.shape[1]):
-                rgb[i][j] = np.zeros(3)
-
-    return rgb
-
-
-def process_image(img: np.ndarray):
+def process_image(img: np.ndarray, depth=14):
     blacklevel = 2048
     saturationLevel = img.max() - 2
     img = img.astype(int)
@@ -53,7 +15,7 @@ def process_image(img: np.ndarray):
     m = np.where(m > 0, [0, 0, 0], [max_val, max_val, max_val])
     result = cv2.bitwise_and(img, m)
 
-    return (result / saturationLevel * 255).astype(np.uint8)
+    return (result / 2**depth * 255).astype(np.uint8)
 
 
 def adjust_gamma(image, gamma=1.0):
@@ -66,23 +28,40 @@ def adjust_gamma(image, gamma=1.0):
     return cv2.LUT(image, table)
 
 
+def find_edges(image, lower, upper):
+    image = image.astype(np.uint8)
+    blank_mask = np.zeros(image.shape, dtype=np.uint8)
+    original = image.copy()
+    mask = None
+    im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    edges = cv2.Canny(im_bw, lower, upper)
+    kernel = np.ones((5, 5), np.uint8)
+    closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+    return edges, closing
+
+
 def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False):
     image = image.astype(np.uint8)
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
     original = image.copy()
     mask = None
-    if method == 1:
+    if method == -1:
+        mask = image
+    elif method == 1:
         im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         (thresh, mask) = cv2.threshold(im_bw, lower[0], upper[0], 0)
     else:
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
         mask = cv2.inRange(hsv, lower, upper)
     mask = cv2.blur(mask, (5, 5))  # blur the image
-    kernel = np.ones((1, 2), np.uint8)
-    erosion = cv2.erode(mask, kernel, iterations=10)
-    eroison = 255 - erosion
-    kernel = np.ones((2, 1), np.uint8)
-    erosion = cv2.erode(eroison, kernel, iterations=5)
+    if method == -1:
+        erosion = mask
+    else:
+        kernel = np.ones((1, 2), np.uint8)
+        erosion = cv2.erode(mask, kernel, iterations=10)
+        eroison = 255 - erosion
+        kernel = np.ones((2, 1), np.uint8)
+        erosion = cv2.erode(eroison, kernel, iterations=5)
     if invert:
         erosion = 255 - erosion
 
@@ -96,7 +75,10 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         h = (cv2.convexHull(c, False))
         cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
         break
-    res_mask = blank_mask1
+    kernel_open = np.ones((5,5),np.uint8)
+    res_mask = cv2.morphologyEx(blank_mask, cv2.MORPH_OPEN, kernel_open)
+    kernel_close = np.ones((30, 30), np.uint8)
+    res_mask = cv2.morphologyEx(res_mask, cv2.MORPH_CLOSE, kernel_close)
     # visualize([image, blank_mask, blank_mask1])
     result = cv2.bitwise_and(original, res_mask)
     return result, gaussian(res_mask, 3)
