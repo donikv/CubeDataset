@@ -39,24 +39,32 @@ def chrom_to_rgb(uv: tuple):
     # rgb = rgb / np.linalg.norm(rgb)
     return rgb
 
-def random_colors():
-    T = np.random.uniform(1000, 11000, 1)
-    dT = np.random.uniform(2000, 5000, 1)
-    T = (T[0], (T[0] + dT[0]) % 11000 + 1000)
-    # c1, c2 = chrom_to_rgb(chromacity_planckian(T[0])), chrom_to_rgb(chromacity_planckian(T[1]))
-    #
-    # return c1, c2
+def angular_distance(a, b):
+    return np.arccos(np.dot(a, b) / np.linalg.norm(a) / np.linalg.norm(b)) * 180 / np.pi
+
+def random_colors(offset=True):
     lam = np.arange(380., 781., 5)
-    spec1, spec2 = planck(lam, T[0]), planck(lam, T[1])
     illuminant_D65 = xyz_from_xy(0.3127, 0.3291)
     cs_hdtv = ColourSystem(red=xyz_from_xy(0.67, 0.33),
                            green=xyz_from_xy(0.21, 0.71),
                            blue=xyz_from_xy(0.15, 0.06),
                            white=illuminant_D65)
-    c1, c2 = cs_hdtv.spec_to_rgb(spec1), cs_hdtv.spec_to_rgb(spec2)
-    c1, c2 = np.clip(c1, a_min=1/255, a_max=254/255), np.clip(c2, a_min=1/255, a_max=254/255)
-    return c1, c2
+    attempts = 0
+    while True:
+        T = np.random.uniform(1000, 11000, 1)
+        dT = np.random.uniform(2000, 5000, 1)
+        T = (T[0], (T[0] + dT[0]) % 11000 + 1000)
+        spec1, spec2 = planck(lam, T[0]), planck(lam, T[1])
 
+        attempts += 1
+        random_offset = np.array([0, 0, 0]) if not offset else np.random.normal([0, 0, 0], [0.1, 0.1, 0.1])
+        c1, c2 = cs_hdtv.spec_to_xyz(spec1), cs_hdtv.spec_to_xyz(spec2)
+        c1, c2 = c1 + random_offset, c2 + random_offset
+        c1, c2 = cs_hdtv.xyz_to_rgb(c1), cs_hdtv.xyz_to_rgb(c2)
+        c1, c2 = np.clip(c1, a_min=1/255, a_max=254/255), np.clip(c2, a_min=1/255, a_max=254/255)
+        ang = angular_distance(c1, c2)
+        if ang > 5 or attempts > 10:
+            return c1, c2
 
 
 

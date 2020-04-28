@@ -6,6 +6,7 @@ import utlis.plotting_utils as pu
 import utlis.relighting_utils as ru
 from utlis.groundtruth_utils import GroundtruthLoader
 import numpy as np
+import multiprocessing as mp
 
 def get_ill_diffs():
     gtLoaderL = GroundtruthLoader('cube+_left_gt.txt')
@@ -32,9 +33,13 @@ def process_with_edges(img, gtLoader, folder_step):
     image = iu.process_image(image, 14)
     image = iu.color_correct_single(image, c_ill=1, u_ill=gtLoader[img - 1])
     edges, closing = iu.find_edges(image, 100, 200)
-    contours, mask = iu.cv2_contours(closing, method=1)
+    contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([128, 255, 255]))
 
-    if 4 * mask.size / 5 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 5:
+    if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
+        return False, image, mask, None
+
+    if identation_index < 12.5:
+        print(identation_index)
         return False, image, mask, None
 
     ill1, ill2 = ru.random_colors()
@@ -46,21 +51,32 @@ def process_with_edges(img, gtLoader, folder_step):
     return True, image, colored_mask, relighted
 
 
+def main_process(data):
+    img, gtLoader = data
+    folder_step = 200
+    draw = False
+    save = True
+    succ, image, colored_mask, relighted = process_with_edges(img, gtLoader, folder_step)
+    if succ:
+        if draw:
+            pu.visualize([image, relighted, colored_mask], title=img)
+        if save:
+            cv2.imwrite(f'./data/relighted/images/{img}-4.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt/{img}-4.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            print(f'Saved {img}')
+    else:
+        if draw:
+            pu.visualize([image, colored_mask], title=img)
+
 if __name__ == '__main__':
     single_ill = get_ill_diffs()
-    folder_step = 200
     gtLoader = GroundtruthLoader('cube+_gt.txt')
-    draw = True
-    save = False
-
-    for img in single_ill:
-        succ, image, colored_mask, relighted = process_with_edges(img, gtLoader, folder_step)
-        if succ:
-            if draw:
-                pu.visualize([image, relighted, colored_mask], title=img)
-            if save:
-                cv2.imwrite(f'./data/relighted/images/{img}-tresh-1.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-                cv2.imwrite(f'./data/relighted/gt/{img}-tresh-1.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
-        else:
-            if draw:
-                pu.visualize([image, colored_mask], title=img)
+    single_ill_gt = list(map(lambda x: (x, gtLoader), single_ill))
+    num_threads = 8
+    if num_threads < 2:
+        for data in single_ill_gt:
+            main_process(data)
+    else:
+        with mp.Pool(num_threads) as p:
+            p.map(main_process, single_ill_gt)
+            print('done')

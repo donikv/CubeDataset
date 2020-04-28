@@ -40,7 +40,29 @@ def find_edges(image, lower, upper):
     return edges, closing
 
 
-def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False):
+def fill_holes(img):
+    im_th = img.copy()
+
+    im_floodfill = im_th.copy()
+
+    h, w = im_th.shape[:2]
+    mask = np.zeros((h+2, w+2), np.uint8)
+
+    start = (0, 0)
+    if img[0,0] != 0:
+        return img
+    cv2.floodFill(im_floodfill, mask, start, 255)
+
+    # Invert floodfilled image
+    im_floodfill_inv = cv2.bitwise_not(im_floodfill)
+
+    # Combine the two images to get the foreground.
+    im_out = im_th | im_floodfill_inv
+
+    return im_out
+
+
+def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False, use_conv=False):
     image = image.astype(np.uint8)
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
     original = image.copy()
@@ -69,19 +91,27 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
     blank_mask1 = np.zeros(image.shape, dtype=np.uint8)
+    indetention_index = cv2.contourArea(cnts[0]) / cv2.arcLength(cnts[0], closed=False)
+
     for c in cnts:
+        # c = cv2.approxPolyDP(c, 0.1, True)
+        cv2.fillConvexPoly(blank_mask, c, (255, 255, 255))
         # creating convex hull object for each contour
-        cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
+        # cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), -1)
         h = (cv2.convexHull(c, False))
         cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
         break
     kernel_open = np.ones((5,5),np.uint8)
-    res_mask = cv2.morphologyEx(blank_mask, cv2.MORPH_OPEN, kernel_open)
+    if use_conv:
+        res_mask = cv2.morphologyEx(blank_mask1, cv2.MORPH_OPEN, kernel_open)
+    else:
+        res_mask = cv2.morphologyEx(blank_mask, cv2.MORPH_OPEN, kernel_open)
     kernel_close = np.ones((30, 30), np.uint8)
     res_mask = cv2.morphologyEx(res_mask, cv2.MORPH_CLOSE, kernel_close)
+    # res_mask = fill_holes(res_mask)
     # visualize([image, blank_mask, blank_mask1])
     result = cv2.bitwise_and(original, res_mask)
-    return result, gaussian(res_mask, 3)
+    return result, gaussian(res_mask, 9), indetention_index
 
 
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):
