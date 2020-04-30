@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import os
 import rawpy
+import shutil
 
 
 def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True):
@@ -49,3 +50,23 @@ def load(index, folder_step=100, mask_cube=False, depth=8):
         folder = f'PNG_{start}_{end}'
         rgb = load_png(f"{index}.PNG", directory=folder, mask_cube=mask_cube)
         return rgb
+
+
+def create_valid_set(path='./data/relighted'):
+    folders = ['images', 'gt', 'img_corrected_1', 'gt_mask']
+    valid_path = f'{path}/valid'
+    if not os.path.exists(valid_path):
+        os.mkdir(valid_path)
+    for folder in folders:
+        image_names = os.listdir(f'{path}/{folder}/')
+        last = int(len(image_names) * 0.8)
+        valid_images = image_names[last:len(image_names) - 1]
+        valid_folder = os.path.join(valid_path, folder)
+        if not os.path.exists(valid_folder):
+            os.mkdir(valid_folder)
+        elif len(os.listdir(valid_folder)) > 0:
+            continue
+        for img in valid_images:
+            image = os.path.join(path, folder, img)
+            valid_image = os.path.join(valid_folder, img)
+            os.rename(image, valid_image)

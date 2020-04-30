@@ -1,4 +1,5 @@
 import cv2
+import os
 
 from utlis import file_utils as fu
 import utlis.image_utils as iu
@@ -26,14 +27,17 @@ def get_ill_diffs():
     return gt_diff_filter
 
 
-def process_with_edges(img, gtLoader, folder_step):
+def process_with_edges(img, gtLoader, folder_step, use_edges):
     image = fu.load(img, folder_step, depth=14)
     height, width, _ = image.shape
     image = cv2.resize(image, (int(width / 5), int(height / 5)))
     image = iu.process_image(image, 14)
     image = iu.color_correct_single(image, c_ill=1, u_ill=gtLoader[img - 1])
-    edges, closing = iu.find_edges(image, 100, 200)
-    contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([128, 255, 255]))
+    if use_edges:
+        edges, closing = iu.find_edges(image, 100, 200)
+        contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([90, 255, 255]))
+    else:
+        contours, mask, identation_index = iu.cv2_contours(image, method=2, upper=np.array([90, 255, 255]))
 
     if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
         return False, image, mask, None
@@ -56,13 +60,14 @@ def main_process(data):
     folder_step = 200
     draw = False
     save = True
-    succ, image, colored_mask, relighted = process_with_edges(img, gtLoader, folder_step)
+    use_edges = True
+    succ, image, colored_mask, relighted = process_with_edges(img, gtLoader, folder_step, use_edges)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask], title=img)
         if save:
-            cv2.imwrite(f'./data/relighted/images/{img}-4.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt/{img}-4.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/images/{img}-5-edge.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt/{img}-5-edge.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
             print(f'Saved {img}')
     else:
         if draw:
@@ -72,6 +77,12 @@ if __name__ == '__main__':
     single_ill = get_ill_diffs()
     gtLoader = GroundtruthLoader('cube+_gt.txt')
     single_ill_gt = list(map(lambda x: (x, gtLoader), single_ill))
+    img_folder = './data/relighted/images/'
+    gt_folder = "./data/relighted/gt/"
+    if not os.path.exists(img_folder):
+        os.mkdir(img_folder)
+    if not os.path.exists(gt_folder):
+        os.mkdir(gt_folder)
     num_threads = 8
     if num_threads < 2:
         for data in single_ill_gt:

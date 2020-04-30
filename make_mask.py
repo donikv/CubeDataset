@@ -47,7 +47,13 @@ if __name__ == '__main__':
     folder = 'relighted'
     special_folder = ''
     image_names = os.listdir(f"{path}/{folder}/images")
-    cor_image_names = os.listdir(f"{path}/{folder}/img_corrected_1")
+    cor_folder = f"{path}/{folder}/img_corrected_1"
+    gt_folder = f"{path}/{folder}/gt_mask"
+    if not os.path.exists(cor_folder):
+        os.mkdir(cor_folder)
+    if not os.path.exists(gt_folder):
+        os.mkdir(gt_folder)
+    cor_image_names = os.listdir(cor_folder)
     image_names = list(filter(lambda x: x not in cor_image_names, image_names))
 
     with mp.Pool(8) as p:
