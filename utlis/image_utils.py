@@ -124,9 +124,10 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):
     def correct_pixel(p, ill1, ill2, mask):
         ill = ill1 * mask + ill2 * (1 - mask)
+        ill = ill / np.linalg.norm(ill)
         return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
-    # ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
+    ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
 
     return np.array([
         np.array([
