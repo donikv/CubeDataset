@@ -26,7 +26,7 @@ if __name__ == '__main__':
     image_path = './data/custom'
     image_names = os.listdir(image_path)
     images = range(1, len(image_names) + 1)
-    images = [5]
+    images = [19, 20]
 
     for img in images:
         image = fu.load_png(str(img) + '.jpg', path=image_path, directory='', mask_cube=False)

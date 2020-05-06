@@ -28,18 +28,15 @@ def process_and_save(name):
     folder = 'relighted'
     print(name)
     image, gt = fu.load_png(name, path=path, directory=f'{folder}/images'), fu.load_png(name, path=path, directory=f'{folder}/gt')
-    for i in range(1, 3):
-        if make_mask:
-            filename = f"{path}/{folder}/gt_mask/{i}-{name}"
-            mask = gu.get_mask_from_gt(gt)
-            if i == 1:
-                mask = 1 - mask
-            cv2.imwrite(filename, mask)
-        corrected = create_corrected_image(image, gt, mask).astype(int)
-        r,g,b = cv2.split(corrected)
-        corrected = np.dstack((b,g,r))
-        filename = f"{path}/{folder}/img_corrected_1/{i}-{name}"
-        cv2.imwrite(filename, corrected)
+    if make_mask:
+        filename = f"{path}/{folder}/gt_mask/{name}"
+        mask = gu.get_mask_from_gt(gt)
+        cv2.imwrite(filename, mask)
+    corrected = create_corrected_image(image, gt, mask).astype(int)
+    r,g,b = cv2.split(corrected)
+    corrected = np.dstack((b,g,r))
+    filename = f"{path}/{folder}/img_corrected_1/{name}"
+    cv2.imwrite(filename, corrected)
 
 
 if __name__ == '__main__':
@@ -56,6 +53,6 @@ if __name__ == '__main__':
     cor_image_names = os.listdir(cor_folder)
     image_names = list(filter(lambda x: x not in cor_image_names, image_names))
 
-    with mp.Pool(8) as p:
+    with mp.Pool(16) as p:
         p.map(process_and_save, image_names)
         print('done')

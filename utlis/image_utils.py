@@ -77,11 +77,14 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         mask = image
     elif method == 1:
         im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        (thresh, mask) = cv2.threshold(im_bw, lower[0], upper[0], 0)
+        avg = im_bw.mean()
+        if not invert:
+            avg = 255 - avg
+        (thresh, mask) = cv2.threshold(im_bw, avg, 255, 0)
     else:
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
-        avg = np.array([hsv[:, :, 0].mean(), 255, 255]).astype(int)
-        mask = cv2.inRange(hsv, lower, avg)
+        # avg = np.array([hsv[:, :, 0].mean(), 255, 255]).astype(int)
+        mask = cv2.inRange(hsv, lower, upper)
     mask = cv2.blur(mask, (5, 5))  # blur the image
     if method == -1:
         erosion = mask
@@ -101,10 +104,10 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
     indetention_index = cv2.contourArea(cnts[0]) / cv2.arcLength(cnts[0], closed=False)
 
     for c in cnts:
-        c = cv2.approxPolyDP(c, 1, True)
-        cv2.fillConvexPoly(blank_mask, c, (255, 255, 255))
+        # c = cv2.approxPolyDP(c, 1, True)
+        # cv2.fillConvexPoly(blank_mask, c, (255, 255, 255))
         # creating convex hull object for each contour
-        # cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), thickness=-1)
+        cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), thickness=-1)
         h = (cv2.convexHull(c, False))
         cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
         break
@@ -124,10 +127,9 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):
     def correct_pixel(p, ill1, ill2, mask):
         ill = ill1 * mask + ill2 * (1 - mask)
-        ill = ill / np.linalg.norm(ill)
         return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
-    ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
+    # ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
 
     return np.array([
         np.array([

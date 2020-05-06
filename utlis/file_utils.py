@@ -5,7 +5,7 @@ import rawpy
 import shutil
 
 
-def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True):
+def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True, landscape=True):
     image = f"{path}/{directory}"
     image_path = os.path.join(image, name)
 
@@ -18,7 +18,7 @@ def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True)
             for j in range(4000, rgb.shape[1]):
                 rgb[i][j] = np.zeros(3)
 
-    if rgb.shape[0] > rgb.shape[1]:
+    if rgb.shape[0] > rgb.shape[1] and landscape:
         rgb = rgb.transpose((1, 0, 2))
 
     return rgb

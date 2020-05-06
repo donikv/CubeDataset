@@ -15,11 +15,10 @@ def get_ill_diffs():
 
     gtsl = gtLoaderL.gt
     gtsr = gtLoaderR.gt
-    gt_diff = np.abs(gtsl - gtsr)
-    gt_diff_mean = gt_diff.mean(0)
+    gt_diff = np.array(list(map(lambda x: ru.angular_distance(x[0], x[1]), zip(gtsl, gtsr))))
     gt_diff_filter = np.array(list(
         map(lambda x: x[0] + 1,
-            filter(lambda x: (x[1] < gt_diff_mean).all(),
+            filter(lambda x: x[1] < 3,
                    enumerate(gt_diff)
                    )
             )
@@ -32,12 +31,12 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
     height, width, _ = image.shape
     image = cv2.resize(image, (int(width / 5), int(height / 5)))
     image = iu.process_image(image, 14)
-    image = iu.color_correct_single(image, c_ill=1, u_ill=gtLoader[img - 1])
+    image_cor = iu.color_correct_single(image, c_ill=1, u_ill=gtLoader[img - 1])
     if use_edges:
-        edges, closing = iu.find_edges(image, 100, 200)
+        edges, closing = iu.find_edges(image_cor, 100, 200)
         contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([90, 255, 255]))
     else:
-        contours, mask, identation_index = iu.cv2_contours(image, method=2, upper=np.array([90, 255, 255]))
+        contours, mask, identation_index = iu.cv2_contours(image_cor, method=1, upper=np.array([30, 255, 255]), invert=True)
 
     if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
         return False, image, mask, None
@@ -47,7 +46,7 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
         return False, image, mask, None
 
     ill1, ill2 = ru.random_colors()
-    relighted = iu.color_correct(image, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
+    relighted = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
                                  c_ill=1)
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
@@ -60,14 +59,14 @@ def main_process(data):
     folder_step = 200
     draw = False
     save = True
-    use_edges = True
+    use_edges = False
     succ, image, colored_mask, relighted = process_with_edges(img, gtLoader, folder_step, use_edges)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask], title=img)
         if save:
-            cv2.imwrite(f'./data/relighted/images/{img}-5-edge.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt/{img}-5-edge.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/images/{img}-6-tresh.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt/{img}-6-tresh.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
             print(f'Saved {img}')
     else:
         if draw:
@@ -83,7 +82,7 @@ if __name__ == '__main__':
         os.mkdir(img_folder)
     if not os.path.exists(gt_folder):
         os.mkdir(gt_folder)
-    num_threads = 8
+    num_threads = 16
     if num_threads < 2:
         for data in single_ill_gt:
             main_process(data)

@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 
-def visualize(images, custom_transform=lambda x: x, title=None):
+def visualize(images, custom_transform=lambda x: x, title=None, titles=None, out_file=None, in_line=False):
     """
     Plot image and masks.
     If two pairs of images and masks are passes, show both.
@@ -13,11 +13,25 @@ def visualize(images, custom_transform=lambda x: x, title=None):
 
     rows = math.ceil((len(images) / 2))
     cols = 2 if len(images) > 1 else 1
-    f, ax = plt.subplots(rows, cols, figsize=(30, 30), squeeze=False)
+    if in_line:
+        f, ax = plt.subplots(1, len(images), figsize=(30, 30), squeeze=True)
+    else:
+        f, ax = plt.subplots(rows, cols, figsize=(30, 30), squeeze=False)
+    f.tight_layout()
     if title is not None:
         f.suptitle(str(title), fontsize=64)
     for idx, img in enumerate(images):
-        ax[int(idx / 2)][idx % 2].imshow(custom_transform(img))
+        if in_line:
+            cur_ax = ax[idx]
+        else:
+            cur_ax = ax[int(idx / 2)][idx % 2]
+        cur_ax.imshow(custom_transform(img))
+        cur_ax.axis('off')
+        if titles is not None and len(titles) > idx:
+            cur_ax.set_title(titles[idx], fontweight="bold", size=40, loc='left')
+
+    if out_file is not None:
+        plt.savefig(out_file, bbox_inches='tight')
     plt.show()
 
 
