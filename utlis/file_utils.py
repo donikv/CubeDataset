@@ -20,6 +20,7 @@ def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True,
 
     if rgb.shape[0] > rgb.shape[1] and landscape:
         rgb = rgb.transpose((1, 0, 2))
+        rgb = cv2.flip(rgb, 0)
 
     return rgb
 

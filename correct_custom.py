@@ -14,7 +14,7 @@ def process_and_visualize(image, idx, gts, title=None, draw=True):
     # rgb = img
     gt = gts[idx - 1]
     gt = gt / np.linalg.norm(gt)
-    corrected = iu.color_correct_single(image, gt, 1/3)
+    corrected = iu.color_correct_single(image, gt, 1/np.sqrt(3))
 
     if draw:
         pu.visualize([image, corrected, ], title=title)
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     image_path = './data/custom'
     image_names = os.listdir(image_path)
     images = range(1, len(image_names) + 1)
-    images = [19, 20]
+    images = [23]
 
     for img in images:
         image = fu.load_png(str(img) + '.jpg', path=image_path, directory='', mask_cube=False)

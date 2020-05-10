@@ -124,16 +124,20 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
     return result, gaussian(res_mask, 9), indetention_index
 
 
-def color_correct(img, mask, ill1, ill2, c_ill=1 / 3.):
-    def correct_pixel(p, ill1, ill2, mask):
-        ill = ill1 * mask + ill2 * (1 - mask)
-        return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
+def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
+    def correct_pixel(p, ill1, ill2, mask, is_relighted):
+        if is_relighted:
+            ill = ill1 if mask[0] > 0.5 else ill2
+            return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
+        else:
+            ill = ill1 * mask + ill2 * (1 - mask)
+            return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
     # ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
 
     return np.array([
         np.array([
-            correct_pixel(img[i][j], c_ill / ill1, c_ill / ill2, mask[i][j]) for j in range(img.shape[1])
+            correct_pixel(img[i][j], c_ill / ill1, c_ill / ill2, mask[i][j], is_relighted) for j in range(img.shape[1])
         ]) for i in range(img.shape[0])
     ], dtype=np.uint8)
 
@@ -144,3 +148,12 @@ def color_correct_single(img, u_ill, c_ill=1 / 3.):
 
     # u_ill = u_ill / np.linalg.norm(u_ill)
     return np.array([np.array([correct_pixel(p, c_ill / u_ill) for p in row]) for row in img], dtype=np.uint8)
+
+
+def mask_image(image, mask, value = 0):
+    masked = np.where(mask > 0.5, image, value)
+    return masked
+
+def combine_images_with_mask(image1, image2, mask):
+    combined = np.where(mask > 0.5, image1, image2)
+    return combined

@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 from colormath.color_objects import LuvColor, sRGBColor
 from colormath.color_conversions import convert_color
@@ -168,3 +169,33 @@ def planck(lam, T):
     fac = h*c/lam_m/k/T
     B = 2*h*c**2/lam_m**5 / (np.exp(fac) - 1)
     return B
+
+
+def gray_world_estimation(img):
+    X = img.reshape((-1, 3))
+    X = np.ma.masked_equal(X, np.array([0, 0, 0]))
+    X = np.ma.masked_equal(X, np.array([255, 255, 255]))
+    X = X.mean(axis=0)
+    if len(X) % 3 != 0:
+        X = X[:-1]
+    if len(X) % 3 != 0:
+        X = X[:-1]
+
+
+    # result = X
+    # avg_a = np.average(result[:, :, 1])
+    # avg_b = np.average(result[:, :, 2])
+    # avg_l = np.average(result[:, :, 0])
+    return np.array([[X]], dtype=np.uint8).squeeze().squeeze()
+
+
+def white_balance(img, rgb):
+    if len(rgb.shape) == 1:
+        rgb = np.array([[rgb]])
+    result = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)
+    lab = lab.squeeze().squeeze()
+    result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.1)
+    result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.1)
+    result = cv2.cvtColor(result, cv2.COLOR_LAB2RGB)
+    return result
