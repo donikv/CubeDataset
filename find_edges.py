@@ -43,7 +43,7 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
 
     if identation_index < 12.5:
         print(identation_index)
-        return False, image, mask, None
+        return False, image, None, None, mask
 
     ill1, ill2 = ru.random_colors()
     relighted = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
@@ -51,26 +51,28 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
 
-    return True, image, colored_mask, relighted
+    return True, image, colored_mask, relighted, mask
 
 
 def main_process(data):
     img, gtLoader = data
     folder_step = 200
-    draw = True
-    save = False
+    draw = False
+    save = True
     use_edges = False
-    succ, image, colored_mask, relighted = process_with_edges(img, gtLoader, folder_step, use_edges)
+    succ, image, colored_mask, relighted, mask = process_with_edges(img, gtLoader, folder_step, use_edges)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask], title=img)
         if save:
-            cv2.imwrite(f'./data/relighted/images/{img}-6-grad.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt/{img}-6-grad.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/images/{img}-7-grad.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt/{img}-7-grad.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt-mask/{img}-7-grad.png',
+                        cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
             print(f'Saved {img}')
     else:
         if draw:
-            pu.visualize([image, colored_mask], title=img)
+            pu.visualize([image, mask], title=img)
 
 if __name__ == '__main__':
     single_ill = get_ill_diffs()
@@ -82,7 +84,7 @@ if __name__ == '__main__':
         os.mkdir(img_folder)
     if not os.path.exists(gt_folder):
         os.mkdir(gt_folder)
-    num_threads = 1
+    num_threads = 16
     if num_threads < 2:
         for data in single_ill_gt:
             main_process(data)

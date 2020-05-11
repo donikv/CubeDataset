@@ -72,6 +72,7 @@ def fill_holes(img):
 def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False, use_conv=False):
     image = image.astype(np.uint8)
     blank_mask = gradient_mask(image.shape)
+    # blank_mask = np.zeros(image.shape, dtype=np.uint8)
 
     original = image.copy()
     mask = None
@@ -111,8 +112,9 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         # creating convex hull object for each contour
         # cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), thickness=-1)
         blank_mask = gradient_fill(c, blank_mask)
-        h = (cv2.convexHull(c, False))
-        cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
+        # h = (cv2.convexHull(c, False))
+        # cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
+        blank_mask1 = add_gradient(blank_mask, c[-1][0])
         break
     kernel_open = np.ones((10,10),np.uint8)
     if use_conv:
@@ -122,7 +124,7 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
     kernel_close = np.ones((20, 20), np.uint8)
     res_mask = cv2.morphologyEx(res_mask, cv2.MORPH_CLOSE, kernel_close)
     # res_mask = fill_holes(res_mask)
-    # visualize([image, blank_mask, blank_mask1])
+    visualize([image, blank_mask, blank_mask1])
     result = cv2.bitwise_and(original, blank_mask)
     return result, gaussian(blank_mask, 9), indetention_index
 
@@ -164,19 +166,27 @@ def combine_images_with_mask(image1, image2, mask):
 
 
 def gradient_mask(shape):
-    blank_mask = np.zeros(shape, dtype=np.uint8)
+    blank_mask = np.ones(shape, dtype=np.uint8) * 255
+    blank_mask = add_gradient(blank_mask, (0, 0))
+    return blank_mask
+
+
+def add_gradient(image, start):
+    blank_mask = np.zeros(image.shape, dtype=np.uint8)
     alpha = np.random.randint(1, 89, 1) * np.pi / 180
     tga = np.tan(alpha)
     tga2 = np.tan(np.pi / 2 - alpha)
     colors = np.linspace(0, 90, blank_mask.shape[0] + blank_mask.shape[1])
     colors = np.ceil(colors).astype(np.uint8)
-    for row in range(blank_mask.shape[0]):
+    rng = range(start[1], blank_mask.shape[0]) if start[1] < blank_mask.shape[0] / 2 else (0, start[1])
+    for row in rng:
         col = int((row*tga)[0])
         p0 = (row, 0)
         p1 = (0, col) if col <= blank_mask.shape[1] else (int((row - blank_mask.shape[1]/tga)[0]), blank_mask.shape[1])
         c = int(colors[row])
         cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
-    for col in range(blank_mask.shape[1]):
+    rng = range(start[0], blank_mask.shape[1]) if start[0] < blank_mask.shape[0] / 2 else (0, start[0])
+    for col in rng:
         row = blank_mask.shape[0]
         col2 = col + row * tga
         p0 = (row, col)
@@ -185,8 +195,9 @@ def gradient_mask(shape):
 
         c = int(colors[col + blank_mask.shape[0]])
         cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
-    visualize([blank_mask])
-    return blank_mask
+    image = (image / 255 * blank_mask).astype(np.uint8)
+    # image = np.where(image != 0, image / 255 * blank_mask, image + blank_mask).astype(np.uint8)
+    return image
 
 
 
