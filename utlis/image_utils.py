@@ -71,7 +71,8 @@ def fill_holes(img):
 
 def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False, use_conv=False):
     image = image.astype(np.uint8)
-    blank_mask = np.zeros(image.shape, dtype=np.uint8)
+    blank_mask = gradient_mask(image.shape)
+
     original = image.copy()
     mask = None
     if method == -1:
@@ -162,10 +163,36 @@ def combine_images_with_mask(image1, image2, mask):
     return combined
 
 
+def gradient_mask(shape):
+    blank_mask = np.zeros(shape, dtype=np.uint8)
+    alpha = np.random.randint(1, 89, 1) * np.pi / 180
+    tga = np.tan(alpha)
+    tga2 = np.tan(np.pi / 2 - alpha)
+    colors = np.linspace(0, 90, blank_mask.shape[0] + blank_mask.shape[1])
+    colors = np.ceil(colors).astype(np.uint8)
+    for row in range(blank_mask.shape[0]):
+        col = int((row*tga)[0])
+        p0 = (row, 0)
+        p1 = (0, col) if col <= blank_mask.shape[1] else (int((row - blank_mask.shape[1]/tga)[0]), blank_mask.shape[1])
+        c = int(colors[row])
+        cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
+    for col in range(blank_mask.shape[1]):
+        row = blank_mask.shape[0]
+        col2 = col + row * tga
+        p0 = (row, col)
+        a = blank_mask.shape[1] - 1 - col
+        p1 = (0, col2) if col2 <= blank_mask.shape[1] else (int((blank_mask.shape[0] - a/tga)[0]), blank_mask.shape[1])
+
+        c = int(colors[col + blank_mask.shape[0]])
+        cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
+    visualize([blank_mask])
+    return blank_mask
+
+
+
 def gradient_fill(contour, blank):
-    # being start and end two points (x1,y1), (x2,y2)
     p0 = contour[0]
-    colors = np.linspace(255, 128, len(contour))
+    colors = np.linspace(255, 110, len(contour))
     colors = np.ceil(colors).astype(np.uint8)
     for i in range(len(contour) - 2):
         p1, p2 = contour[i + 1], contour[i + 2]

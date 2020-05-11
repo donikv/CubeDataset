@@ -38,8 +38,8 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
     else:
         contours, mask, identation_index = iu.cv2_contours(image_cor, method=1, upper=np.array([30, 255, 255]), invert=True)
 
-    if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
-        return False, image, mask, None
+    # if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
+    #     return False, image, mask, None
 
     if identation_index < 12.5:
         print(identation_index)
@@ -65,8 +65,8 @@ def main_process(data):
         if draw:
             pu.visualize([image, relighted, colored_mask], title=img)
         if save:
-            cv2.imwrite(f'./data/relighted/images/{img}-6-tresh.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt/{img}-6-tresh.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/images/{img}-6-grad.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt/{img}-6-grad.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
             print(f'Saved {img}')
     else:
         if draw:
