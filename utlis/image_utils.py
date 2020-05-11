@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from skimage.filters import gaussian
+from skimage.draw import line
 
 from utlis.plotting_utils import visualize
 
@@ -107,7 +108,8 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         # c = cv2.approxPolyDP(c, 1, True)
         # cv2.fillConvexPoly(blank_mask, c, (255, 255, 255))
         # creating convex hull object for each contour
-        cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), thickness=-1)
+        # cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), thickness=-1)
+        blank_mask = gradient_fill(c, blank_mask)
         h = (cv2.convexHull(c, False))
         cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
         break
@@ -120,8 +122,8 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
     res_mask = cv2.morphologyEx(res_mask, cv2.MORPH_CLOSE, kernel_close)
     # res_mask = fill_holes(res_mask)
     # visualize([image, blank_mask, blank_mask1])
-    result = cv2.bitwise_and(original, res_mask)
-    return result, gaussian(res_mask, 9), indetention_index
+    result = cv2.bitwise_and(original, blank_mask)
+    return result, gaussian(blank_mask, 9), indetention_index
 
 
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
@@ -154,6 +156,21 @@ def mask_image(image, mask, value = 0):
     masked = np.where(mask > 0.5, image, value)
     return masked
 
+
 def combine_images_with_mask(image1, image2, mask):
     combined = np.where(mask > 0.5, image1, image2)
     return combined
+
+
+def gradient_fill(contour, blank):
+    # being start and end two points (x1,y1), (x2,y2)
+    p0 = contour[0]
+    colors = np.linspace(255, 128, len(contour))
+    colors = np.ceil(colors).astype(np.uint8)
+    for i in range(len(contour) - 2):
+        p1, p2 = contour[i + 1], contour[i + 2]
+        cnt = np.array([p0, p1, p2])
+        c = int(colors[i])
+        cv2.fillConvexPoly(blank, cnt, (c, c, c))
+        # cv2.drawContours(blank, [cnt], -1, (c, c, c), thickness=-1)
+    return blank

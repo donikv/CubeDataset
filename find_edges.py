@@ -57,8 +57,8 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
 def main_process(data):
     img, gtLoader = data
     folder_step = 200
-    draw = False
-    save = True
+    draw = True
+    save = False
     use_edges = False
     succ, image, colored_mask, relighted = process_with_edges(img, gtLoader, folder_step, use_edges)
     if succ:
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         os.mkdir(img_folder)
     if not os.path.exists(gt_folder):
         os.mkdir(gt_folder)
-    num_threads = 16
+    num_threads = 1
     if num_threads < 2:
         for data in single_ill_gt:
             main_process(data)
