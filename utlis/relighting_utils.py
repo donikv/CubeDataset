@@ -171,31 +171,42 @@ def planck(lam, T):
     return B
 
 
-def gray_world_estimation(img):
-    X = img.reshape((-1, 3))
+def preprocess_for_estimation(img, mask):
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+    img[:, :, 0] = img[:, :, 0] * mask[:, :, 0]
+    img = cv2.cvtColor(img, cv2.COLOR_LUV2RGB)
+    return img.reshape((-1, 3))
+
+
+def gray_world_estimation(img, mask=np.ones((1, 1, 1))):
+    X = preprocess_for_estimation(img, mask)
     X = np.ma.masked_equal(X, np.array([0, 0, 0]))
     X = np.ma.masked_equal(X, np.array([255, 255, 255]))
     X = X.mean(axis=0)
-    if len(X) % 3 != 0:
-        X = X[:-1]
-    if len(X) % 3 != 0:
-        X = X[:-1]
+
+    return np.array(X, dtype=np.uint8)
 
 
-    # result = X
-    # avg_a = np.average(result[:, :, 1])
-    # avg_b = np.average(result[:, :, 2])
-    # avg_l = np.average(result[:, :, 0])
+def white_patch_estimation(img, mask=np.ones((1, 1, 1))):
+    X = preprocess_for_estimation(img, mask)
+    X = np.ma.masked_equal(X, np.array([0, 0, 0]))
+    X = np.ma.masked_equal(X, np.array([255, 255, 255]))
+    mn = X.mean(axis=0)
+    # X = np.ma.masked_greater(X, 170)
+    X = X.max(axis=0)
+
     return np.array([[X]], dtype=np.uint8).squeeze().squeeze()
 
 
-def white_balance(img, rgb):
+def white_balance(img, rgb, mask=np.ones((1, 1, 1))):
     if len(rgb.shape) == 1:
         rgb = np.array([[rgb]])
+    if rgb.max() < 1:
+        rgb = (rgb * 255).astype(np.uint8)
     result = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)
     lab = lab.squeeze().squeeze()
-    result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.1)
-    result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.1)
+    result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.5) * mask[:, :, 0]
+    result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.5) * mask[:, :, 0]
     result = cv2.cvtColor(result, cv2.COLOR_LAB2RGB)
     return result
