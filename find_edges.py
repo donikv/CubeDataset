@@ -43,15 +43,17 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
 
     if identation_index < 12.5:
         print(identation_index)
-        return False, image, None, None, mask
+        return False, image, None, None, None, mask
 
     ill1, ill2 = ru.random_colors()
     relighted = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
                                  c_ill=1)
+    relighted1 = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
+                                 c_ill=1, is_relighted=True)
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
 
-    return True, image, colored_mask, relighted, mask
+    return True, image, colored_mask, relighted, relighted1, mask
 
 
 def main_process(data):
@@ -60,15 +62,17 @@ def main_process(data):
     draw = False
     save = True
     use_edges = False
-    succ, image, colored_mask, relighted, mask = process_with_edges(img, gtLoader, folder_step, use_edges)
+    succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges)
     if succ:
         if draw:
-            pu.visualize([image, relighted, colored_mask], title=img)
+            pu.visualize([relighted, relighted1, colored_mask, mask], title=img)
         if save:
             cv2.imwrite(f'./data/relighted/images/{img}-7-grad.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
             cv2.imwrite(f'./data/relighted/gt/{img}-7-grad.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt-mask/{img}-7-grad.png',
-                        cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt_mask/{img}-7-grad.png',
+                        cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/img_corrected_1/{img}-7-grad.png',
+                        cv2.cvtColor(relighted1, cv2.COLOR_RGB2BGR))
             print(f'Saved {img}')
     else:
         if draw:
@@ -80,10 +84,12 @@ if __name__ == '__main__':
     single_ill_gt = list(map(lambda x: (x, gtLoader), single_ill))
     img_folder = './data/relighted/images/'
     gt_folder = "./data/relighted/gt/"
-    if not os.path.exists(img_folder):
-        os.mkdir(img_folder)
-    if not os.path.exists(gt_folder):
-        os.mkdir(gt_folder)
+    gt_mask_folder = "./data/relighted/gt_mask/"
+    img_cor_folder = "./data/relighted/img_corrected_1/"
+    folders = [img_folder, gt_folder, gt_mask_folder, img_cor_folder]
+    for img_folder in folders:
+        if not os.path.exists(img_folder):
+            os.mkdir(img_folder)
     num_threads = 16
     if num_threads < 2:
         for data in single_ill_gt:

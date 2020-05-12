@@ -71,8 +71,8 @@ def fill_holes(img):
 
 def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False, use_conv=False):
     image = image.astype(np.uint8)
-    blank_mask = gradient_mask(image.shape)
-    # blank_mask = np.zeros(image.shape, dtype=np.uint8)
+    # blank_mask = gradient_mask(image.shape)
+    blank_mask = np.zeros(image.shape, dtype=np.uint8)
 
     original = image.copy()
     mask = None
@@ -106,6 +106,7 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
     blank_mask1 = np.zeros(image.shape, dtype=np.uint8)
     indetention_index = cv2.contourArea(cnts[0]) / cv2.arcLength(cnts[0], closed=False)
 
+    start = None
     for c in cnts:
         # c = cv2.approxPolyDP(c, 1, True)
         # cv2.fillConvexPoly(blank_mask, c, (255, 255, 255))
@@ -114,17 +115,18 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         blank_mask = gradient_fill(c, blank_mask)
         # h = (cv2.convexHull(c, False))
         # cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
-        blank_mask1 = add_gradient(blank_mask, c[-1][0])
+        start = c[0][0]
         break
-    kernel_open = np.ones((10,10),np.uint8)
+    kernel_open = np.ones((2,2),np.uint8)
     if use_conv:
         res_mask = cv2.morphologyEx(blank_mask1, cv2.MORPH_OPEN, kernel_open)
     else:
         res_mask = cv2.morphologyEx(blank_mask, cv2.MORPH_OPEN, kernel_open)
-    kernel_close = np.ones((20, 20), np.uint8)
+    kernel_close = np.ones((5, 5), np.uint8)
     res_mask = cv2.morphologyEx(res_mask, cv2.MORPH_CLOSE, kernel_close)
+    res_mask = add_gradient(res_mask, start)
     # res_mask = fill_holes(res_mask)
-    visualize([image, blank_mask, blank_mask1])
+    # visualize([image, blank_mask, res_mask])
     result = cv2.bitwise_and(original, blank_mask)
     return result, gaussian(blank_mask, 9), indetention_index
 
@@ -132,7 +134,7 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
     def correct_pixel(p, ill1, ill2, mask, is_relighted):
         if is_relighted:
-            ill = ill1 if mask[0] > 0.5 else ill2
+            ill = ill1 if mask[0] > 0.5 else [c_ill, c_ill, c_ill]
             return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
         else:
             ill = ill1 * mask + ill2 * (1 - mask)
@@ -175,18 +177,15 @@ def add_gradient(image, start):
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
     alpha = np.random.randint(1, 89, 1) * np.pi / 180
     tga = np.tan(alpha)
-    tga2 = np.tan(np.pi / 2 - alpha)
     colors = np.linspace(0, 90, blank_mask.shape[0] + blank_mask.shape[1])
     colors = np.ceil(colors).astype(np.uint8)
-    rng = range(start[1], blank_mask.shape[0]) if start[1] < blank_mask.shape[0] / 2 else (0, start[1])
-    for row in rng:
+    for row in range(blank_mask.shape[0]):
         col = int((row*tga)[0])
         p0 = (row, 0)
         p1 = (0, col) if col <= blank_mask.shape[1] else (int((row - blank_mask.shape[1]/tga)[0]), blank_mask.shape[1])
         c = int(colors[row])
         cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
-    rng = range(start[0], blank_mask.shape[1]) if start[0] < blank_mask.shape[0] / 2 else (0, start[0])
-    for col in rng:
+    for col in range(blank_mask.shape[1]):
         row = blank_mask.shape[0]
         col2 = col + row * tga
         p0 = (row, col)
@@ -195,9 +194,13 @@ def add_gradient(image, start):
 
         c = int(colors[col + blank_mask.shape[0]])
         cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
-    image = (image / 255 * blank_mask).astype(np.uint8)
-    # image = np.where(image != 0, image / 255 * blank_mask, image + blank_mask).astype(np.uint8)
-    return image
+    if start[1] < blank_mask.shape[0] / 2:
+        blank_mask = cv2.flip(blank_mask, 1)
+    if start[0] < blank_mask.shape[0] / 2:
+        blank_mask = cv2.flip(blank_mask, 0)
+    image1 = (image / 255 * blank_mask).astype(np.uint8)
+    image2 = np.where(image != 0, image / 255 * (255-blank_mask), image + blank_mask).astype(np.uint8)
+    return image2
 
 
 
