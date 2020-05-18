@@ -83,7 +83,10 @@ class ColourSystem:
     """
 
     # The CIE colour matching function for 380 - 780 nm in 5 nm intervals
-    cmf = np.loadtxt('./data/misc/cie-cmf.txt', usecols=(1,2,3))
+    try:
+        cmf = np.loadtxt('./resources/cie-cmf.txt', usecols=(1,2,3))
+    except OSError:
+        cmf = None
 
     def __init__(self, red, green, blue, white):
         """Initialise the ColourSystem object.
@@ -186,13 +189,27 @@ def gray_world_estimation(img, mask=np.ones((1, 1, 1))):
 
     return np.array(X, dtype=np.uint8)
 
+def gray_edge_estimation(img, mask=np.ones((1, 1, 1))):
+    edg = cv2.Canny(img, 0, 128)
+    edg = np.dstack((edg, edg, edg))
+    img = np.where(edg != 0, img, np.zeros(3,  dtype=np.uint8))
+    X = preprocess_for_estimation(img, mask)
+    X = np.ma.masked_equal(X, np.array([0, 0, 0]))
+    X = np.ma.masked_equal(X, np.array([255, 255, 255]))
+    X = X.mean(axis=0)
+
+    return np.array(X, dtype=np.uint8)
+
 
 def white_patch_estimation(img, mask=np.ones((1, 1, 1))):
     X = preprocess_for_estimation(img, mask)
     X = np.ma.masked_equal(X, np.array([0, 0, 0]))
     X = np.ma.masked_equal(X, np.array([255, 255, 255]))
-    mn = X.mean(axis=0)
-    # X = np.ma.masked_greater(X, 170)
+    # mn = X.mean(axis=0)
+    # hsv = cv2.cvtColor(np.array([X]), cv2.COLOR_RGB2HSV).squeeze()
+    # pos = hsv[:, 2].argmax(axis=0)
+    # # X = np.ma.masked_greater(X, )
+    # X = X[pos]
     X = X.max(axis=0)
 
     return np.array([[X]], dtype=np.uint8).squeeze().squeeze()
@@ -201,7 +218,7 @@ def white_patch_estimation(img, mask=np.ones((1, 1, 1))):
 def white_balance(img, rgb, mask=np.ones((1, 1, 1))):
     if len(rgb.shape) == 1:
         rgb = np.array([[rgb]])
-    if rgb.max() < 1:
+    if rgb.max() <= 1:
         rgb = (rgb * 255).astype(np.uint8)
     result = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)

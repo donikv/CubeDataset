@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 
 from skimage.filters import gaussian
-from skimage.draw import line
 
 from utlis.plotting_utils import visualize
 
@@ -173,27 +172,38 @@ def gradient_mask(shape):
     return blank_mask
 
 
-def add_gradient(image, start):
+def add_gradient(image, start, colors=None, alpha=None):
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
-    alpha = np.random.randint(1, 89, 1) * np.pi / 180
+    if alpha is None:
+        alpha = np.random.randint(1, 89, 1) * np.pi / 180
+        alpha = alpha[0]
     tga = np.tan(alpha)
-    colors = np.linspace(0, 90, blank_mask.shape[0] + blank_mask.shape[1])
-    colors = np.ceil(colors).astype(np.uint8)
+    if colors is None:
+        colors = np.linspace(0, 90, blank_mask.shape[0] + blank_mask.shape[1])
+        colors = np.ceil(colors).astype(np.uint8)
+    color_idx = np.round(np.linspace(0, len(colors)-1, blank_mask.shape[0] + blank_mask.shape[1])).astype(int)
     for row in range(blank_mask.shape[0]):
-        col = int((row*tga)[0])
+        col = int((row*tga))
         p0 = (row, 0)
-        p1 = (0, col) if col <= blank_mask.shape[1] else (int((row - blank_mask.shape[1]/tga)[0]), blank_mask.shape[1])
-        c = int(colors[row])
-        cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
+        p1 = (0, col) if col <= blank_mask.shape[1] else (int((row - blank_mask.shape[1]/tga)), blank_mask.shape[1])
+        if len(colors[0]) > 1:
+            c = (colors[color_idx[row]] * 255).astype(int)
+            cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (int(c[0]), int(c[1]), int(c[2])), thickness=2)
+        else:
+            c = int(colors[color_idx[row]])
+            cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=2)
     for col in range(blank_mask.shape[1]):
         row = blank_mask.shape[0]
-        col2 = col + row * tga
+        col2 = int(col + row * tga)
         p0 = (row, col)
         a = blank_mask.shape[1] - 1 - col
-        p1 = (0, col2) if col2 <= blank_mask.shape[1] else (int((blank_mask.shape[0] - a/tga)[0]), blank_mask.shape[1])
-
-        c = int(colors[col + blank_mask.shape[0]])
-        cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=1)
+        p1 = (0, col2) if col2 <= blank_mask.shape[1] else (int((blank_mask.shape[0] - a/tga)), blank_mask.shape[1])
+        if len(colors[0]) > 1:
+            c = (colors[color_idx[col + blank_mask.shape[0]]] * 255).astype(int)
+            cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (int(c[0]), int(c[1]), int(c[2])), thickness=2)
+        else:
+            c = int(colors[color_idx[col + blank_mask.shape[0]]])
+            cv2.line(blank_mask, (p0[1], p0[0]), (p1[1], p1[0]), (c, c, c), thickness=2)
     if start[1] < blank_mask.shape[0] / 2:
         blank_mask = cv2.flip(blank_mask, 1)
     if start[0] < blank_mask.shape[0] / 2:
@@ -206,8 +216,7 @@ def add_gradient(image, start):
 
 def gradient_fill(contour, blank):
     p0 = contour[0]
-    colors = np.linspace(255, 110, len(contour))
-    colors = np.ceil(colors).astype(np.uint8)
+    colors = np.ceil(np.linspace(255, 110, len(contour))).astype(np.uint8)
     for i in range(len(contour) - 2):
         p1, p2 = contour[i + 1], contour[i + 2]
         cnt = np.array([p0, p1, p2])
