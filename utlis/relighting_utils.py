@@ -183,8 +183,12 @@ def preprocess_for_estimation(img, mask):
 
 def gray_world_estimation(img, mask=np.ones((1, 1, 1))):
     X = preprocess_for_estimation(img, mask)
-    X = np.ma.masked_equal(X, np.array([0, 0, 0]))
     X = np.ma.masked_equal(X, np.array([255, 255, 255]))
+    hsv = cv2.cvtColor(np.array([X]), cv2.COLOR_RGB2HLS).squeeze()
+    hsv = np.ma.masked_less(hsv, [0, 80, 0])
+    hsv = hsv.filled(0)
+    X = cv2.cvtColor(np.array([hsv], dtype=np.uint8), cv2.COLOR_HLS2RGB).squeeze()
+    X = np.ma.masked_equal(X, np.array([0, 0, 0]))
     X = X.mean(axis=0)
 
     return np.array(X, dtype=np.uint8)
@@ -196,7 +200,8 @@ def gray_edge_estimation(img, mask=np.ones((1, 1, 1))):
     img = np.where(edg != 0, img, np.zeros(3,  dtype=np.uint8))
     X = preprocess_for_estimation(img, mask)
     X = np.ma.masked_equal(X, np.array([0, 0, 0]))
-    X = np.ma.masked_equal(X, np.array([255, 255, 255]))
+    X = np.ma.masked_less(X, np.array([50, 50, 50]))
+    # X = np.ma.masked_equal(X, np.array([255, 255, 255]))
     X = X.mean(axis=0)
 
     return np.array(X, dtype=np.uint8)
@@ -208,7 +213,7 @@ def white_patch_estimation(img, mask=np.ones((1, 1, 1))):
     # X = np.ma.masked_equal(X, np.array([255, 255, 255]))
     # mn = X.mean(axis=0)
     hsv = cv2.cvtColor(np.array([X]), cv2.COLOR_RGB2HLS).squeeze()
-    hsv = np.ma.masked_greater(hsv, [255, 240, 255])
+    hsv = np.ma.masked_greater(hsv, [255, 250, 255])
     hsv = hsv.filled(0)
     pos = hsv[:, 1].argmax(axis=0)
     # X = cv2.cvtColor(np.array([hsv]), cv2.COLOR_HLS2RGB).squeeze()
@@ -225,11 +230,13 @@ def white_balance(img, rgb, mask=np.ones((1, 1, 1))):
         rgb = np.array([[rgb]])
     if rgb.max() <= 1:
         rgb = (rgb * 255).astype(np.uint8)
+    if mask.max() > 1:
+        mask = mask / 255
     result = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)
     lab = lab.squeeze().squeeze()
-    result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.5) * mask[:, :, 0]
-    result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.5) * mask[:, :, 0]
-    result = np.clip(result, 1, 254)
+    result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.1) * mask[:, :, 0]
+    result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.1) * mask[:, :, 0]
+    # result = np.clip(result, 1, 254)
     result = cv2.cvtColor(result, cv2.COLOR_LAB2RGB)
     return result

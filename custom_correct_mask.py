@@ -12,6 +12,52 @@ import numpy as np
 import multiprocessing as mp
 
 
+def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
+    mask = gaussian(mask, 3)
+    image1 = iu.mask_image(image, mask)
+    image2 = iu.mask_image(image, 1 - mask)
+    gt2 = ru.gray_world_estimation(image1, mask) / 255
+    gt1 = ru.gray_world_estimation(image2, 1 - mask) / 255
+    # gt2 = ru.white_patch_estimation(image1, mask) / 255
+    # gt1 = ru.white_patch_estimation(image2, 1-mask) / 255
+    # gt1 /= 2
+    # gt2 /= 2
+    corrected1 = ru.white_balance(image1, gt2, mask)
+    corrected2 = ru.white_balance(image2, gt1, 1 - mask)
+    # corrected1 = iu.color_correct_single(image1, gt2, c_ill=1/3)
+    # corrected2 = iu.color_correct_single(image2, gt1, c_ill=1/3)
+    corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
+    corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
+    corrected = iu.combine_images_with_mask(corrected1, corrected2, mask)
+    colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
+
+    image1 = iu.mask_image(image, gt_mask)
+    image2 = iu.mask_image(image, 1 - gt_mask)
+    gt2 = ru.gray_world_estimation(gt, gt_mask) / 255
+    gt1 = ru.gray_world_estimation(gt, 1 - gt_mask) / 255
+    # gt2 = ru.white_patch_estimation(gt, gt_mask) / 255
+    # gt1 = ru.white_patch_estimation(gt, 1-gt_mask) / 255
+    # gt1 /= 2
+    # gt2 /= 2
+    corrected1 = ru.white_balance(image1, gt2, gt_mask)
+    corrected2 = ru.white_balance(image2, gt1, 1 - gt_mask)
+    # corrected1 = iu.color_correct_single(image1, gt2, c_ill=1/3)
+    # corrected2 = iu.color_correct_single(image2, gt1, c_ill=1/3)
+    corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
+    corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
+    corrected_real = iu.combine_images_with_mask(corrected1, corrected2, gt_mask)
+    colored_mask2 = np.where(gt_mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
+
+    pu.visualize([image, gt, mask, gt_mask, colored_mask, colored_mask2, corrected, corrected_real],
+                 titles=['a)', 'b)', 'c)', 'd)', 'e)', 'f)', 'g)', 'h)'],
+                 in_line=False,
+                 out_file=None,  # f'./images/model_corrected{idx}.png',
+                 # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
+                 # title=title
+                 )
+
+
+
 def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, use_estimation=False):
     # image = cv2.resize(image, (0, 0), fx=1 / 5, fy=1 / 5)
     # mask = cv2.resize(mask, (0, 0), fx=1 / 5, fy=1 / 5)
@@ -19,8 +65,8 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
     if use_estimation:
         image1 = iu.mask_image(image, mask)
         image2 = iu.mask_image(image, 1-mask)
-        gt2 = ru.gray_edge_estimation(image1, mask) / 255
-        gt1 = ru.gray_edge_estimation(image2, 1-mask) / 255
+        gt2 = ru.gray_world_estimation(image1, mask) / 255
+        gt1 = ru.gray_world_estimation(image2, 1-mask) / 255
         # gt2 = ru.white_patch_estimation(image1, mask) / 255
         # gt1 = ru.white_patch_estimation(image2, 1-mask) / 255
         # gt1 /= 2
@@ -55,22 +101,43 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
 
     if draw:
         colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
+        # path = f'./images/corrected/model_corrected{idx}.png'
+        # if not os.path.exists(path):
+        #     os.mkdir(path)
         pu.visualize([mask, image, corrected, corrected2, corrected1, colored_mask],
                      titles=['a)', 'b)', 'c)', 'd)', 'e)', 'f)'],
                      in_line=False,
-                     out_file=None, #f'./images/model_corrected{idx}.png',
+                     out_file=f'./images//model_corrected_unet_cube_comb{idx}.png',
                      # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
                      # title=title
                      )
     return corrected
 
 
-def main_process(data):
+def main_process2(data):
     use_corrected_masks = True
     # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     # mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
     image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
     mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks' #if use_corrected_masks else './data/custom_mask_nocor'
+    gt_mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/gt_mask'  # if use_corrected_masks else './data/custom_mask_nocor'
+    gt_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/groundtruth'
+    ext = '.png' if use_corrected_masks else '.jpg'
+    img, gt1, gt2 = data
+
+    image = fu.load_png(img, path=image_path, directory='', mask_cube=False)
+    mask = fu.load_png(img, path=mask_path, directory='', mask_cube=False)
+    gt_mask = fu.load_png(img, path=gt_mask_path, directory='', mask_cube=False)
+    gt = fu.load_png(img, path=gt_path, directory='', mask_cube=False)
+    process_with_real_and_predicted(image, img, mask, gt_mask, gt)
+
+
+def main_process(data):
+    use_corrected_masks = True
+    image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
+    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
+    # image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
+    # mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks' #if use_corrected_masks else './data/custom_mask_nocor'
     ext = '.png' if use_corrected_masks else '.jpg'
     img, gt1, gt2 = data
 
@@ -86,7 +153,7 @@ if __name__ == '__main__':
     except OSError:
         gt1 = None
         gt2 = None
-    image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
+    image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     mask_path = './data/custom_mask'
     image_names = os.listdir(image_path)
     images = range(1, len(image_names) + 1)
