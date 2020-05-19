@@ -189,6 +189,7 @@ def gray_world_estimation(img, mask=np.ones((1, 1, 1))):
 
     return np.array(X, dtype=np.uint8)
 
+
 def gray_edge_estimation(img, mask=np.ones((1, 1, 1))):
     edg = cv2.Canny(img, 0, 128)
     edg = np.dstack((edg, edg, edg))
@@ -203,14 +204,18 @@ def gray_edge_estimation(img, mask=np.ones((1, 1, 1))):
 
 def white_patch_estimation(img, mask=np.ones((1, 1, 1))):
     X = preprocess_for_estimation(img, mask)
-    X = np.ma.masked_equal(X, np.array([0, 0, 0]))
-    X = np.ma.masked_equal(X, np.array([255, 255, 255]))
+    # X = np.ma.masked_equal(X, np.array([0, 0, 0]))
+    # X = np.ma.masked_equal(X, np.array([255, 255, 255]))
     # mn = X.mean(axis=0)
-    # hsv = cv2.cvtColor(np.array([X]), cv2.COLOR_RGB2HSV).squeeze()
-    # pos = hsv[:, 2].argmax(axis=0)
-    # # X = np.ma.masked_greater(X, )
-    # X = X[pos]
-    X = X.max(axis=0)
+    hsv = cv2.cvtColor(np.array([X]), cv2.COLOR_RGB2HLS).squeeze()
+    hsv = np.ma.masked_greater(hsv, [255, 240, 255])
+    hsv = hsv.filled(0)
+    pos = hsv[:, 1].argmax(axis=0)
+    # X = cv2.cvtColor(np.array([hsv]), cv2.COLOR_HLS2RGB).squeeze()
+    # pos = hsv[:, 1].argmax(axis=0)
+    #
+    X = X[pos]
+    # X = X.max(axis=0)
 
     return np.array([[X]], dtype=np.uint8).squeeze().squeeze()
 
@@ -225,5 +230,6 @@ def white_balance(img, rgb, mask=np.ones((1, 1, 1))):
     lab = lab.squeeze().squeeze()
     result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.5) * mask[:, :, 0]
     result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.5) * mask[:, :, 0]
+    result = np.clip(result, 1, 254)
     result = cv2.cvtColor(result, cv2.COLOR_LAB2RGB)
     return result
