@@ -18,29 +18,40 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
     image2 = iu.mask_image(image, 1 - mask)
     gt2 = ru.gray_world_estimation(image1, mask) / 255
     gt1 = ru.gray_world_estimation(image2, 1 - mask) / 255
-    # gt2 = ru.white_patch_estimation(image1, mask) / 255
-    # gt1 = ru.white_patch_estimation(image2, 1-mask) / 255
-    # gt1 /= 2
-    # gt2 /= 2
     corrected1 = ru.white_balance(image1, gt2, mask)
     corrected2 = ru.white_balance(image2, gt1, 1 - mask)
-    # corrected1 = iu.color_correct_single(image1, gt2, c_ill=1/3)
-    # corrected2 = iu.color_correct_single(image2, gt1, c_ill=1/3)
     corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
     corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
     corrected = iu.combine_images_with_mask(corrected1, corrected2, mask)
     colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
 
+    gti2 = ru.gray_world_estimation(gt, gt_mask, mask_hsv=False) / 255
+    gti1 = ru.gray_world_estimation(gt, 1-gt_mask, mask_hsv=False) / 255
+    colored_mask2 = np.where(gt_mask > 0.5, (gti2 * 255).astype(np.uint8), (gti1 * 255).astype(np.uint8))
+
+
+    path = 'images/model_corrected_unet_cube_comb/'
+    if not os.path.exists(path):
+        os.mkdir(path)
+    pu.visualize([image, mask, colored_mask, gt, corrected, ],
+                 titles=['a)', 'b)', 'c)', 'd)', 'e)'],
+                 in_line=True,
+                 out_file=f'{path}{idx}',
+                 # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
+                 # title=title
+                 )
+    return
+
     image1 = iu.mask_image(image, gt_mask)
     image2 = iu.mask_image(image, 1 - gt_mask)
     gt2 = ru.gray_world_estimation(gt, gt_mask) / 255
     gt1 = ru.gray_world_estimation(gt, 1 - gt_mask) / 255
-    # gt2 = ru.white_patch_estimation(gt, gt_mask) / 255
-    # gt1 = ru.white_patch_estimation(gt, 1-gt_mask) / 255
+    gt2 = ru.white_patch_estimation(gt, gt_mask) / 255
+    gt1 = ru.white_patch_estimation(gt, 1-gt_mask) / 255
     # gt1 /= 2
     # gt2 /= 2
-    corrected1 = ru.white_balance(image1, gt2, gt_mask)
-    corrected2 = ru.white_balance(image2, gt1, 1 - gt_mask)
+    # corrected1 = ru.white_balance(image1, gt2, gt_mask)
+    # corrected2 = ru.white_balance(image2, gt1, 1 - gt_mask)
     # corrected1 = iu.color_correct_single(image1, gt2, c_ill=1/3)
     # corrected2 = iu.color_correct_single(image2, gt1, c_ill=1/3)
     corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
@@ -48,13 +59,13 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
     corrected_real = iu.combine_images_with_mask(corrected1, corrected2, gt_mask)
     colored_mask2 = np.where(gt_mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
 
-    pu.visualize([image, gt, mask, gt_mask, colored_mask, colored_mask2, corrected, corrected_real],
-                 titles=['a)', 'b)', 'c)', 'd)', 'e)', 'f)', 'g)', 'h)'],
-                 in_line=False,
-                 out_file=None,  # f'./images/model_corrected{idx}.png',
-                 # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
-                 # title=title
-                 )
+    # pu.visualize([image, gt, mask, gt_mask, colored_mask, colored_mask2, corrected, corrected_real],
+    #              titles=['a)', 'b)', 'c)', 'd)', 'e)', 'f)', 'g)', 'h)'],
+    #              in_line=False,
+    #              out_file=None,  # f'./images/model_corrected{idx}.png',
+    #              # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
+    #              # title=title
+    #              )
 
 
 
@@ -67,19 +78,14 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
         image2 = iu.mask_image(image, 1-mask)
         gt2 = ru.gray_world_estimation(image1, mask) / 255
         gt1 = ru.gray_world_estimation(image2, 1-mask) / 255
-        # gt2 = ru.white_patch_estimation(image1, mask) / 255
-        # gt1 = ru.white_patch_estimation(image2, 1-mask) / 255
-        # gt1 /= 2
-        # gt2 /= 2
         corrected1 = ru.white_balance(image1, gt2, mask)
         corrected2 = ru.white_balance(image2, gt1, 1-mask)
-        # corrected1 = iu.color_correct_single(image1, gt2, c_ill=1/3)
-        # corrected2 = iu.color_correct_single(image2, gt1, c_ill=1/3)
         corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
         corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
         corrected = iu.combine_images_with_mask(corrected1, corrected2, mask)
-        # corrected1 = ru.white_balance(image, gt1)
-        # corrected2 = ru.white_balance(image, gt2)
+        gt = ru.gray_world_estimation(image1) / 255
+        corrected1 = ru.white_balance(image, gt)
+        corrected2 = ru.white_balance(image, gt2)
     else:
         gt1 = gts1[idx - 1]
 
@@ -101,13 +107,13 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
 
     if draw:
         colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
-        # path = f'./images/corrected/model_corrected{idx}.png'
-        # if not os.path.exists(path):
-        #     os.mkdir(path)
-        pu.visualize([mask, image, corrected, corrected2, corrected1, colored_mask],
-                     titles=['a)', 'b)', 'c)', 'd)', 'e)', 'f)'],
-                     in_line=False,
-                     out_file=f'./images//model_corrected_unet_cube_comb{idx}.png',
+        path = 'images/model_corrected_unet_cube_comb/'
+        if not os.path.exists(path):
+            os.mkdir(path)
+        pu.visualize([image, mask, colored_mask, corrected1, corrected],
+                     titles=['a)', 'b)', 'c)', 'd)', 'e)'],
+                     in_line=True,
+                     out_file=f'{path}{idx}',
                      # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
                      # title=title
                      )
@@ -154,6 +160,7 @@ if __name__ == '__main__':
         gt1 = None
         gt2 = None
     image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
+    image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
     mask_path = './data/custom_mask'
     image_names = os.listdir(image_path)
     images = range(1, len(image_names) + 1)
@@ -164,7 +171,7 @@ if __name__ == '__main__':
 
     if num_proc < 2:
         for data in images:
-            main_process(data)
+            main_process2(data)
     else:
         with mp.Pool(8) as pool:
             pool.map(main_process, images)
