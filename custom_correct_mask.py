@@ -25,18 +25,29 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
     corrected = iu.combine_images_with_mask(corrected1, corrected2, mask)
     colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
 
+    gt_mask = gt_mask / 255
     gti2 = ru.gray_world_estimation(gt, gt_mask, mask_hsv=False) / 255
     gti1 = ru.gray_world_estimation(gt, 1-gt_mask, mask_hsv=False) / 255
+
+    def pp_angular_difference(cmask, gt):
+        gt, cmask = gt.clip(1, 254), cmask.clip(1, 254)
+        cmask, gt = cmask/255, gt/255
+        dis = np.array([ru.angular_distance(cmask[i, j, :], gt[i, j, :]) for i in range(cmask.shape[0]) for j in range(cmask.shape[1])])
+        return dis.mean()
+
+    def pc_angular_difference(gt1, gt2, gti1, gti2):
+        return (ru.angular_distance(gt1, gti1) + ru.angular_distance(gt2, gti2)) / 2
+    print(f'{idx}, {pp_angular_difference(colored_mask, gt)}, {pc_angular_difference(gt1, gt2, gti1, gti2)}')
     colored_mask2 = np.where(gt_mask > 0.5, (gti2 * 255).astype(np.uint8), (gti1 * 255).astype(np.uint8))
 
 
     path = 'images/model_corrected_unet_cube_comb/'
     if not os.path.exists(path):
         os.mkdir(path)
-    pu.visualize([image, mask, colored_mask, gt, corrected, ],
+    pu.visualize([image, mask, colored_mask, colored_mask2, corrected, ],
                  titles=['a)', 'b)', 'c)', 'd)', 'e)'],
                  in_line=True,
-                 out_file=f'{path}{idx}',
+                 # out_file=f'{path}{idx}',
                  # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
                  # title=title
                  )
@@ -83,7 +94,7 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
         corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
         corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
         corrected = iu.combine_images_with_mask(corrected1, corrected2, mask)
-        gt = ru.gray_world_estimation(image1) / 255
+        gt = ru.gray_world_estimation(image) / 255
         corrected1 = ru.white_balance(image, gt)
         corrected2 = ru.white_balance(image, gt2)
     else:
@@ -107,7 +118,7 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
 
     if draw:
         colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
-        path = 'images/model_corrected_unet_cube_comb/'
+        path = 'images/model_corrected_custom_cube6/'
         if not os.path.exists(path):
             os.mkdir(path)
         pu.visualize([image, mask, colored_mask, corrected1, corrected],
@@ -125,7 +136,7 @@ def main_process2(data):
     # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     # mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
     image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
-    mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks' #if use_corrected_masks else './data/custom_mask_nocor'
+    mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks-custom' #if use_corrected_masks else './data/custom_mask_nocor'
     gt_mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/gt_mask'  # if use_corrected_masks else './data/custom_mask_nocor'
     gt_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/groundtruth'
     ext = '.png' if use_corrected_masks else '.jpg'
@@ -141,9 +152,7 @@ def main_process2(data):
 def main_process(data):
     use_corrected_masks = True
     image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
-    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
-    # image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
-    # mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks' #if use_corrected_masks else './data/custom_mask_nocor'
+    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks-custom'
     ext = '.png' if use_corrected_masks else '.jpg'
     img, gt1, gt2 = data
 
@@ -159,7 +168,7 @@ if __name__ == '__main__':
     except OSError:
         gt1 = None
         gt2 = None
-    image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
+    # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
     mask_path = './data/custom_mask'
     image_names = os.listdir(image_path)

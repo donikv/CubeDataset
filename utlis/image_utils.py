@@ -132,6 +132,8 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
 
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
     def correct_pixel(p, ill1, ill2, mask, is_relighted):
+        ill1 = ill1 / [ill1[0] + ill1[1] + ill1[2]]
+        ill2 = ill2 / [ill2[0] + ill2[1] + ill2[2]]
         if is_relighted:
             ill = ill1 if mask[0] > 0.5 else [c_ill, c_ill, c_ill]
             return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
@@ -150,6 +152,7 @@ def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
 
 def color_correct_single(img, u_ill, c_ill=1 / 3.):
     def correct_pixel(p, ill):
+        ill = ill / [ill[0] + ill[1] + ill[2]]
         return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
     # u_ill = u_ill / np.linalg.norm(u_ill)

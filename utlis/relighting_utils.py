@@ -41,6 +41,8 @@ def chrom_to_rgb(uv: tuple):
     return rgb
 
 def angular_distance(a, b):
+    a = a / (a[0] + a[1] + a[2])
+    b = b / (b[0] + b[1] + b[2])
     return np.arccos(np.dot(a, b) / np.linalg.norm(a) / np.linalg.norm(b)) * 180 / np.pi
 
 def random_colors(offset=True):
@@ -182,9 +184,12 @@ def preprocess_for_estimation(img, mask):
 
 
 def gray_world_estimation(img, mask=np.ones((1, 1, 1)), mask_hsv=True):
-    X = preprocess_for_estimation(img, mask)
-    X = np.ma.masked_equal(X, np.array([255, 255, 255]))
+    if mask is not None:
+        X = preprocess_for_estimation(img, mask)
+    else:
+        X = img.reshape((-1, 3))
     if mask_hsv:
+        X = np.ma.masked_equal(X, np.array([255, 255, 255]))
         hsv = cv2.cvtColor(np.array([X]), cv2.COLOR_RGB2HLS).squeeze()
         hsv = np.ma.masked_less(hsv, [0, 80, 0])
         hsv = hsv.filled(0)

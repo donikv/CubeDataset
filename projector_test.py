@@ -63,14 +63,16 @@ def find_gt():
 
 if __name__ == '__main__':
     # size = 21
-    # plt.visualize([pu.create_image(1080, 1920, size, pu.circle_image)], out_file=f'projector_test/circle{size}.png')
-    dir_name = './projector_test/projector1/images'
-    images = os.listdir(dir_name)
-    # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
-
-    gts_left = np.loadtxt('./projector_test/gt_left.txt')
-    data = list(map(lambda x: (x, gts_left), images))
-
-    with mp.Pool(16) as p:
-        p.map(crop, data)
-        print('done')
+    images = pu.create_image(1080, 1920, 1, pu.line_image)
+    for i, image in enumerate(images):
+        plt.visualize([image], out_file=f'projector_test/second/line5-{i}.png')
+    # dir_name = './projector_test/projector1/images'
+    # images = os.listdir(dir_name)
+    # # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
+    #
+    # gts_left = np.loadtxt('./projector_test/gt_left.txt')
+    # data = list(map(lambda x: (x, gts_left), images))
+    #
+    # with mp.Pool(16) as p:
+    #     p.map(crop, data)
+    #     print('done')
