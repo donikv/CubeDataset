@@ -10,12 +10,13 @@ import multiprocessing as mp
 
 
 def correct(data):
-    dir_name = './projector_test/projector1/images'
+    dir_name = './projector_test/projector2/images'
     img, gts_left = data
     idx = int(img[:-4]) - 1
     image = fu.load_png(img, dir_name, '', mask_cube=False)
-    image = iu.color_correct_single(image, gts_left[idx] / 255, c_ill=1 / np.sqrt(3))
-    cv2.imwrite(f'./projector_test/projector1/img_corrected_1/{idx + 1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+    gt = np.clip(gts_left[idx], 1, 255) / 255
+    image = iu.color_correct_single(image, gt, c_ill=1)
+    cv2.imwrite(f'./projector_test/projector2/img_corrected_1/{idx + 1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
 
 def crop(data):
@@ -46,33 +47,42 @@ def crop(data):
 
 
 def find_gt():
-    dir_name = '../Datasets/fer_projector'
+    dir_name = './projector_test/projector2/'
     images = os.listdir(dir_name)
     images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
 
     gts_left, gts_right = [], []
     for idx, img in enumerate(images):
+        if idx % 3 != 0 or img >= 'NIK_6896.JPG':
+            continue
         image = fu.load_png(img, dir_name, '', mask_cube=False)
-        gts_left.append(image[1165, 1445])
-        gts_right.append(image[1049, 3209])
+        gts_left.append(image[1613, 1131])
+        gts_right.append(image[1460, 4267])
         image = cv2.resize(image, (0, 0), fx = 1/5, fy = 1/5)
-        cv2.imwrite(f'./projector_test/projector1/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-    np.savetxt('./projector_test/gt_left.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
-    np.savetxt('./projector_test/gt_right.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
+        idx = int(idx / 3)
+        cv2.imwrite(f'./projector_test/projector2/images/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+    np.savetxt('./projector_test/projector2/gt_left.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
+    np.savetxt('./projector_test/projector2/gt_right.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
 
+
+def line(image, colors):
+    alpha = np.random.randint(1, 89, 1) * np.pi / 180
+    alpha = 0.5
+    return pu.line_image(image, colors, alpha)
 
 if __name__ == '__main__':
     # size = 21
-    images = pu.create_image(1080, 1920, 1, pu.line_image)
-    for i, image in enumerate(images):
-        plt.visualize([image], out_file=f'projector_test/second/line5-{i}.png')
-    # dir_name = './projector_test/projector1/images'
-    # images = os.listdir(dir_name)
-    # # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
-    #
-    # gts_left = np.loadtxt('./projector_test/gt_left.txt')
-    # data = list(map(lambda x: (x, gts_left), images))
-    #
-    # with mp.Pool(16) as p:
-    #     p.map(crop, data)
-    #     print('done')
+    # images = pu.create_image(1080, 1920, 1, line)
+    # for i, image in enumerate(images):
+    #     plt.visualize([image], out_file=f'projector_test/second/line5-{i}.png')
+    # find_gt()
+    dir_name = './projector_test/projector2/images'
+    images = os.listdir(dir_name)
+    # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
+
+    gts_left = np.loadtxt('./projector_test/projector2/gt_left.txt')
+    data = list(map(lambda x: (x, gts_left), images))
+
+    with mp.Pool(16) as p:
+        p.map(correct, data)
+        print('done')
