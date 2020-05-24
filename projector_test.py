@@ -47,67 +47,106 @@ def crop(data):
 
 
 def find_gt():
-    dir_name = './projector_test/projector2/'
+    dir_name = './projector_test/projector2/pngs/both'
+    dir_name_left = './projector_test/projector2/pngs/left'
+    dir_name_right = './projector_test/projector2/pngs/right'
     images = os.listdir(dir_name)
-    images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
+    images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
 
     gts_left, gts_right = [], []
     for idx, img in enumerate(images):
-        if idx % 3 != 0 or img >= 'NIK_6896.JPG':
+        if idx < 39 or idx > 43:
             continue
+        if idx == 40:
+            dir_name = dir_name_right
         image = fu.load_png(img, dir_name, '', mask_cube=False)
+        image = iu.process_image(image, depth=14)
+        image_r = fu.load_png(img, dir_name_right, '', mask_cube=False)
+        image_r = iu.process_image(image_r, depth=14)
+        image_l = fu.load_png(img, dir_name_left, '', mask_cube=False)
+        image_l = iu.process_image(image_l, depth=14)
         gt_left, gt_right = np.zeros(3), np.zeros(3)
         n = 20
         for i in range(n):
             for j in range(n):
-                gt_left = gt_left + np.clip(image[1812 + i, 1152 + j], 1, 255)
-                gt_right = gt_right + np.clip(image[1647 + i, 4278 + j], 1, 255)
+                if idx < 39 or idx > 43:
+                    x1, y1 = 1152, 1812
+                    x2, y2 = 4278, 1647
+                else:
+                    x1, y1 = 1089, 362
+                    x2, y2 = 2494, 351
+                gt_left = gt_left + np.clip(image[y1 + i, x1 + j], 1, 255)
+                gt_right = gt_right + np.clip(image[y2 + i, x2 + j], 1, 255)
         gt_left, gt_right = gt_left / n / n, gt_right / n / n
         image = cv2.resize(image, (0, 0), fx = 1/5, fy = 1/5)
         gts_left.append(gt_left)
         gts_right.append(gt_right)
-        idx = int(idx / 3)
-        cv2.imwrite(f'./projector_test/projector2/images/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-    np.savetxt('./projector_test/projector2/gt_left.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
-    np.savetxt('./projector_test/projector2/gt_right.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
+        cv2.imwrite(f'./projector_test/projector2/pngs/both/images/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(f'./projector_test/projector2/pngs/left/images/{idx + 1}.png', cv2.cvtColor(image_l, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(f'./projector_test/projector2/pngs/right/images/{idx + 1}.png', cv2.cvtColor(image_r, cv2.COLOR_RGB2BGR))
+    np.savetxt('./projector_test/projector2/gt_left1.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
+    np.savetxt('./projector_test/projector2/gt_right1.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
+
+
+def par_create(data):
+    idx, img, gts_left, gts_right = data
+    dir_name = './projector_test/projector2/pngs/both'
+    dir_name_left = './projector_test/projector2/pngs/left'
+    dir_name_right = './projector_test/projector2/pngs/right'
+    if idx < 39 or idx > 43:
+        return
+
+    image = fu.load_png(img, dir_name, '', mask_cube=False)
+    image_left = fu.load_png(img, dir_name_left, '', mask_cube=False)
+    image_right = fu.load_png(img, dir_name_right, '', mask_cube=False)
+    image = cv2.resize(image, (0, 0), fx = 1/10, fy = 1/10)
+    image_left = cv2.resize(image_left, (0, 0), fx=1 / 10, fy=1 / 10)
+    image_right = cv2.resize(image_right, (0, 0), fx=1 / 10, fy=1 / 10)
+    gt_left = np.clip(gts_left[idx], 1, 255) / 255
+    gt_right = np.clip(gts_right[idx], 1, 255) / 255
+    gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left)
+    cv2.imwrite(f'./projector_test/projector2/gt_mask/{idx + 1}rl.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
+    gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
+    cv2.imwrite(f'./projector_test/projector2/gt_mask/{idx + 1}lr.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
 
 
 def create_gt_mask():
-    dir_name = './projector_test/projector2/'
+
+    dir_name = './projector_test/projector2/pngs/both'
+    dir_name_left = './projector_test/projector2/pngs/left'
+    dir_name_right = './projector_test/projector2/pngs/right'
     images = os.listdir(dir_name)
-    images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
+    images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
     gts_left = np.loadtxt('./projector_test/projector2/gt_left.txt')
     gts_right = np.loadtxt('./projector_test/projector2/gt_right.txt')
+    data = list(map(lambda x: (x[0], x[1], gts_left, gts_right), enumerate(images)))
 
-    for idx in range(0, len(images), 3):
-        img = images[idx]
-        if 'NIK_6769.JPG' > img or img >= 'NIK_6896.JPG':
-            continue
+    num_proc = 16
+
+    if num_proc > 1:
+        with mp.Pool(num_proc) as p:
+            p.map(par_create, data)
+            print('done')
+        return
+
+    for idx, img in enumerate(images):
         image = fu.load_png(img, dir_name, '', mask_cube=False)
-        image_left = fu.load_png(images[idx+1], dir_name, '', mask_cube=False)
-        image_right = fu.load_png(images[idx+2], dir_name, '', mask_cube=False)
-        # gt_left, gt_right = np.zeros(3), np.zeros(3)
-        # n = 20
-        # for i in range(n):
-        #     for j in range(n):
-        #         gt_left = gt_left + np.clip(image[1613 + i, 1115 + j], 1, 255) / 255
-        #         gt_right = gt_right + np.clip(image[1460 + i, 4267 + j], 1, 255) / 255
-        # gt_left, gt_right = gt_left / n / n, gt_right / n / n
+        image_left = fu.load_png(img, dir_name_left, '', mask_cube=False)
+        image_right = fu.load_png(img, dir_name_right, '', mask_cube=False)
         image = cv2.resize(image, (0, 0), fx = 1/10, fy = 1/10)
         image_left = cv2.resize(image_left, (0, 0), fx=1 / 10, fy=1 / 10)
         image_right = cv2.resize(image_right, (0, 0), fx=1 / 10, fy=1 / 10)
-        idx = int(idx / 3)
         gt_left = np.clip(gts_left[idx], 1, 255) / 255
         gt_right = np.clip(gts_right[idx], 1, 255) / 255
         gtimg = np.ones((50, 50, 3)) * gt_right
         gtimg1 = np.ones((50, 50, 3)) * gt_left
         gtimg = np.concatenate((gtimg, gtimg1), axis=1)
         gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left)
-        plt.visualize([image, gt_mask, ir, il, image_right, image_left, r, gtimg], out_file=dir_name + f'gt_mask/{idx+1}rl.png')
+        plt.visualize([image, gt_mask, ir, il, image_right, image_left, r, gtimg])
 
         gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
-        plt.visualize([image, gt_mask, ir, il, image_right, image_left, r, gtimg], out_file=dir_name + f'gt_mask/{idx+1}lr.png')
-        # cv2.imwrite(f'./projector_test/projector2/gt_mask/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        plt.visualize([image, gt_mask, ir, il, image_right, image_left, r, gtimg])
+        cv2.imwrite(f'./projector_test/projector2/gt_mask/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
 
 def debayer():
@@ -119,14 +158,13 @@ def debayer():
 
     for idx in range(0, len(images), 1):
         img = images[idx]
-        name = f'{idx/3}.png'
+        name = f'{int(idx/3) + 1}.png'
         if idx % 3 == 1:
             fold = 'left'
         elif idx % 3 == 2:
             fold = 'right'
         else:
             fold = 'both'
-        name = name + '.png'
         imageRaw = cv2.imread(os.path.join(dir_name, img), cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH)
 
         rgb = cv2.cvtColor(imageRaw, cv2.COLOR_BAYER_BG2BGR)
@@ -143,9 +181,9 @@ if __name__ == '__main__':
     # images = pu.create_image(1080, 1920, 1, line)
     # for i, image in enumerate(images):
     #     plt.visualize([image], out_file=f'projector_test/second/line5-{i}.png')
+    # debayer()
     # find_gt()
-    debayer()
-    # create_gt_mask()
+    create_gt_mask()
     # dir_name = './projector_test/projector2/images'
     # images = os.listdir(dir_name)
     # # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))

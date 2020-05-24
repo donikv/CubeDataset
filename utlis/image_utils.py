@@ -6,7 +6,7 @@ from skimage.filters import gaussian
 from utlis.plotting_utils import visualize
 
 def process_image(img: np.ndarray, depth=14):
-    blacklevel = 2048
+    blacklevel = -500
     saturationLevel = img.max() - 2
     img = img.astype(int)
     img = np.clip(img - blacklevel, a_min=0, a_max=np.infty).astype(int)

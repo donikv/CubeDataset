@@ -69,9 +69,11 @@ def create_gt_mask(image, image_right, image_left, gt_right, gt_left):
     # img_right_norm = iu.color_correct_single(image_right, gt_right, c_ill=1/np.sqrt(3))
     img_right_norm = (image_right * 3 / np.sqrt(3)).astype(np.uint8)
     img_right_norm = cv2.cvtColor(img_right_norm, cv2.COLOR_RGB2HLS) #dodano
+    img_right_norm[:, :, 1] = np.where(img_right_norm[:, :, 1] < 10, 0, img_right_norm[:, :, 1])
     # img_left_norm = iu.color_correct_single(image_left, gt_left, c_ill=1/np.sqrt(3))
     img_left_norm = (image_left * 3 / np.sqrt(3)).astype(np.uint8)
     img_left_norm = cv2.cvtColor(img_left_norm, cv2.COLOR_RGB2HLS) #dodano
+    img_left_norm[:, :, 1] = np.where(img_left_norm[:, :, 1] < 10, 0, img_left_norm[:, :, 1])
     r = img_right_norm / (img_left_norm + img_right_norm)
     r = r.clip(0, 1)
     # mn = r.mean(axis=2)
