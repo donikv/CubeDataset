@@ -151,8 +151,11 @@ def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
 
 
 def color_correct_single(img, u_ill, c_ill=1 / 3.):
+    u_ill = u_ill / u_ill.sum()
+    # return np.clip(img / (c_ill / u_ill), 0, 255).astype(np.uint8)
+
     def correct_pixel(p, ill):
-        ill = ill / [ill[0] + ill[1] + ill[2]]
+        # ill = ill / [ill[0] + ill[1] + ill[2]]
         return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
     # u_ill = u_ill / np.linalg.norm(u_ill)
