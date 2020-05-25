@@ -5,8 +5,7 @@ from skimage.filters import gaussian
 
 from utlis.plotting_utils import visualize
 
-def process_image(img: np.ndarray, depth=14):
-    blacklevel = -500
+def process_image(img: np.ndarray, depth=14, blacklevel=2048):
     saturationLevel = img.max() - 2
     img = img.astype(int)
     img = np.clip(img - blacklevel, a_min=0, a_max=np.infty).astype(int)
@@ -123,7 +122,7 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         res_mask = cv2.morphologyEx(blank_mask, cv2.MORPH_OPEN, kernel_open)
     kernel_close = np.ones((5, 5), np.uint8)
     res_mask = cv2.morphologyEx(res_mask, cv2.MORPH_CLOSE, kernel_close)
-    res_mask = add_gradient(res_mask, start)
+    # res_mask = add_gradient(res_mask, start)
     # res_mask = fill_holes(res_mask)
     # visualize([image, blank_mask, res_mask])
     result = cv2.bitwise_and(original, blank_mask)
@@ -132,8 +131,6 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
 
 def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
     def correct_pixel(p, ill1, ill2, mask, is_relighted):
-        ill1 = ill1 / [ill1[0] + ill1[1] + ill1[2]]
-        ill2 = ill2 / [ill2[0] + ill2[1] + ill2[2]]
         if is_relighted:
             ill = ill1 if mask[0] > 0.5 else [c_ill, c_ill, c_ill]
             return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
@@ -142,7 +139,8 @@ def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
             return np.clip(np.multiply(p, ill), a_min=0, a_max=255)
 
     # ill1, ill2 = ill1 / np.linalg.norm(ill1), ill2 / np.linalg.norm(ill2)
-
+    ill1 = ill1 / ill1.sum()
+    ill2 = ill2 / ill2.sum()
     return np.array([
         np.array([
             correct_pixel(img[i][j], c_ill / ill1, c_ill / ill2, mask[i][j], is_relighted) for j in range(img.shape[1])

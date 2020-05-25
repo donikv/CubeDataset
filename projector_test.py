@@ -153,8 +153,6 @@ def debayer():
     dir_name = './projector_test/projector2/'
     images = os.listdir(dir_name)
     images = list(filter(lambda x: str(x).lower().endswith('.tiff'), images))
-    gts_left = np.loadtxt('./projector_test/projector2/gt_left.txt')
-    gts_right = np.loadtxt('./projector_test/projector2/gt_right.txt')
 
     for idx in range(0, len(images), 1):
         img = images[idx]
@@ -168,7 +166,7 @@ def debayer():
         imageRaw = cv2.imread(os.path.join(dir_name, img), cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH)
 
         rgb = cv2.cvtColor(imageRaw, cv2.COLOR_BAYER_BG2BGR)
-        cv2.imwrite(f'{dir_name}pngs/{fold}/{name}', rgb)
+        cv2.imwrite(f'{dir_name}pngs_bright/{fold}/{name}', rgb)
 
 
 def line(image, colors):
@@ -181,9 +179,9 @@ if __name__ == '__main__':
     # images = pu.create_image(1080, 1920, 1, line)
     # for i, image in enumerate(images):
     #     plt.visualize([image], out_file=f'projector_test/second/line5-{i}.png')
-    # debayer()
+    debayer()
     # find_gt()
-    create_gt_mask()
+    # create_gt_mask()
     # dir_name = './projector_test/projector2/images'
     # images = os.listdir(dir_name)
     # # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))

@@ -47,13 +47,13 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
 
     ill1, ill2 = ru.random_colors()
     relighted = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
-                                 c_ill=1)
-    relighted1 = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
-                                 c_ill=1, is_relighted=True)
+                                 c_ill=1/3)
+    relighted1 = iu.color_correct(image_cor, mask=mask, ill1=ill2 / ill1, ill2=np.ones(3),
+                                 c_ill=1/3)
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
 
-    return True, image, colored_mask, relighted, relighted1, mask
+    return True, image_cor, colored_mask, relighted, relighted1, mask
 
 
 def main_process(data):
@@ -65,13 +65,13 @@ def main_process(data):
     succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges)
     if succ:
         if draw:
-            pu.visualize([relighted, relighted1, colored_mask, mask], title=img)
+            pu.visualize([image, relighted, colored_mask, mask], title=img)
         if save:
-            cv2.imwrite(f'./data/relighted/images/{img}-7-grad.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt/{img}-7-grad.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt_mask/{img}-7-grad.png',
+            cv2.imwrite(f'./data/relighted/images/{img}-8-grad.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt/{img}-8-grad.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt_mask/{img}-8-grad.png',
                         cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/img_corrected_1/{img}-7-grad.png',
+            cv2.imwrite(f'./data/relighted/img_corrected_1/{img}-8-grad.png',
                         cv2.cvtColor(relighted1, cv2.COLOR_RGB2BGR))
             print(f'Saved {img}')
     else:
