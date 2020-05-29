@@ -47,54 +47,50 @@ def crop(data):
 
 
 def find_gt():
-    dir_name = './projector_test/projector2/pngs/both'
-    dir_name_left = './projector_test/projector2/pngs/left'
-    dir_name_right = './projector_test/projector2/pngs/right'
+    dir_name = 'D:\\fax\\Dataset\\ambient/pngs/both'
+    dir_name_left = 'D:\\fax\\Dataset\\ambient/pngs/left'
+    dir_name_right = 'D:\\fax\\Dataset\\ambient/pngs/right'
     images = os.listdir(dir_name)
     images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
 
     gts_left, gts_right = [], []
     for idx, img in enumerate(images):
-        if idx < 39 or idx > 43:
-            continue
-        if idx == 40:
-            dir_name = dir_name_right
         image = fu.load_png(img, dir_name, '', mask_cube=False)
-        image = iu.process_image(image, depth=14)
+        image = iu.process_image(image, depth=16, blacklevel=2048)
         image_r = fu.load_png(img, dir_name_right, '', mask_cube=False)
-        image_r = iu.process_image(image_r, depth=14)
+        image_r = iu.process_image(image_r, depth=16, blacklevel=2048)
         image_l = fu.load_png(img, dir_name_left, '', mask_cube=False)
-        image_l = iu.process_image(image_l, depth=14)
+        image_l = iu.process_image(image_l, depth=16, blacklevel=2048)
         gt_left, gt_right = np.zeros(3), np.zeros(3)
         n = 20
         for i in range(n):
             for j in range(n):
-                if idx < 39 or idx > 43:
-                    x1, y1 = 1152, 1812
-                    x2, y2 = 4278, 1647
-                else:
-                    x1, y1 = 1089, 362
-                    x2, y2 = 2494, 351
-                gt_left = gt_left + np.clip(image[y1 + i, x1 + j], 1, 255)
-                gt_right = gt_right + np.clip(image[y2 + i, x2 + j], 1, 255)
+                x1, y1 = 1130, 2540#1200, 2450
+                x2, y2 = 1440, 2540 #1350, 2450
+                # if idx < 39 or idx > 43:
+                #     x1, y1 = 1152, 1812
+                #     x2, y2 = 4278, 1647
+                # else:
+                #     x1, y1 = 1089, 362
+                #     x2, y2 = 2494, 351
+                gt_left = gt_left + np.clip(image_l[y1 + i, x1 + j], 1, 255)
+                gt_right = gt_right + np.clip(image_r[y2 + i, x2 + j], 1, 255)
         gt_left, gt_right = gt_left / n / n, gt_right / n / n
         image = cv2.resize(image, (0, 0), fx = 1/5, fy = 1/5)
         gts_left.append(gt_left)
         gts_right.append(gt_right)
-        cv2.imwrite(f'./projector_test/projector2/pngs/both/images/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-        cv2.imwrite(f'./projector_test/projector2/pngs/left/images/{idx + 1}.png', cv2.cvtColor(image_l, cv2.COLOR_RGB2BGR))
-        cv2.imwrite(f'./projector_test/projector2/pngs/right/images/{idx + 1}.png', cv2.cvtColor(image_r, cv2.COLOR_RGB2BGR))
-    np.savetxt('./projector_test/projector2/gt_left1.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
-    np.savetxt('./projector_test/projector2/gt_right1.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
+        cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/both/images/{idx+1}.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/left/images/{idx + 1}.png', cv2.cvtColor(image_l, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/right/images/{idx + 1}.png', cv2.cvtColor(image_r, cv2.COLOR_RGB2BGR))
+    np.savetxt('D:\\fax\\Dataset\\ambient/gt_left.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
+    np.savetxt('D:\\fax\\Dataset\\ambient/gt_right.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
 
 
 def par_create(data):
     idx, img, gts_left, gts_right = data
-    dir_name = './projector_test/projector2/pngs/both'
-    dir_name_left = './projector_test/projector2/pngs/left'
-    dir_name_right = './projector_test/projector2/pngs/right'
-    if idx < 39 or idx > 43:
-        return
+    dir_name = 'D:\\fax\\Dataset\\ambient/pngs/both'
+    dir_name_left = 'D:\\fax\\Dataset\\ambient/pngs/left'
+    dir_name_right = 'D:\\fax\\Dataset\\ambient/pngs/right'
 
     image = fu.load_png(img, dir_name, '', mask_cube=False)
     image_left = fu.load_png(img, dir_name_left, '', mask_cube=False)
@@ -105,23 +101,23 @@ def par_create(data):
     gt_left = np.clip(gts_left[idx], 1, 255) / 255
     gt_right = np.clip(gts_right[idx], 1, 255) / 255
     gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left)
-    cv2.imwrite(f'./projector_test/projector2/gt_mask/{idx + 1}rl.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
-    gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
-    cv2.imwrite(f'./projector_test/projector2/gt_mask/{idx + 1}lr.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(f'D:\\fax\\Dataset\\ambient/gt_mask/{idx + 1}.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
+    # gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
+    # cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/gt_mask/{idx + 1}lr.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
 
 
 def create_gt_mask():
 
-    dir_name = './projector_test/projector2/pngs/both'
-    dir_name_left = './projector_test/projector2/pngs/left'
-    dir_name_right = './projector_test/projector2/pngs/right'
+    dir_name = 'D:\\fax\\Dataset\\ambient/pngs/both'
+    dir_name_left = 'D:\\fax\\Dataset\\ambient/pngs/left'
+    dir_name_right = 'D:\\fax\\Dataset\\ambient/pngs/right'
     images = os.listdir(dir_name)
     images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
-    gts_left = np.loadtxt('./projector_test/projector2/gt_left.txt')
-    gts_right = np.loadtxt('./projector_test/projector2/gt_right.txt')
-    data = list(map(lambda x: (x[0], x[1], gts_left, gts_right), enumerate(images)))
+    gts_left = np.loadtxt('D:\\fax\\Dataset\\ambient/gt_left.txt')
+    gts_right = np.loadtxt('D:\\fax\\Dataset\\ambient/gt_right.txt')
+    data = list(map(lambda x: (int(x[:-4])-1, x, gts_left, gts_right), images))
 
-    num_proc = 16
+    num_proc = 1
 
     if num_proc > 1:
         with mp.Pool(num_proc) as p:
@@ -150,9 +146,10 @@ def create_gt_mask():
 
 
 def debayer():
-    dir_name = './projector_test/projector2/'
+    dir_name = 'D:\\fax\\Dataset\\two_ill/'
     images = os.listdir(dir_name)
-    images = list(filter(lambda x: str(x).lower().endswith('.tiff'), images))
+    images = list(filter(lambda x: str(x).lower().endswith('.cr2'), images))
+    images = sorted(images, key=lambda x: int(x[4:-4]))
 
     for idx in range(0, len(images), 1):
         img = images[idx]
@@ -163,10 +160,10 @@ def debayer():
             fold = 'right'
         else:
             fold = 'both'
-        imageRaw = cv2.imread(os.path.join(dir_name, img), cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH)
+        imageRaw = fu.load_cr2(img, directory='', mask_cube=False)
 
-        rgb = cv2.cvtColor(imageRaw, cv2.COLOR_BAYER_BG2BGR)
-        cv2.imwrite(f'{dir_name}pngs_bright/{fold}/{name}', rgb)
+        rgb = cv2.cvtColor(imageRaw, cv2.COLOR_RGB2BGR) #  cv2.cvtColor(imageRaw, cv2.COLOR_BAYER_RG2BGR)
+        cv2.imwrite(f'{dir_name}pngs/{fold}/{name}', rgb)
 
 
 def line(image, colors):
@@ -178,7 +175,7 @@ if __name__ == '__main__':
     # size = 21
     # images = pu.create_image(1080, 1920, 1, line)
     # for i, image in enumerate(images):
-    #     plt.visualize([image], out_file=f'projector_test/second/line5-{i}.png')
+    #     plt.visualize([image], out_file=f'projector_test/second/line-white3-{i}.png')
     debayer()
     # find_gt()
     # create_gt_mask()

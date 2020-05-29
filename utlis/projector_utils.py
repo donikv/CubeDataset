@@ -11,8 +11,13 @@ def create_image(height, width, gradient, coloring_f):
     image = np.zeros((height, width, 3))
     colors = ru.random_colors(desaturate=False)
     imgs = []
-    color_combs = [colors, (colors[0], np.zeros(3)), (np.zeros(3), colors[1])]
-    images = [image.copy(), image.copy(), image.copy()]
+    color_combs = [colors,
+                   (colors[0], np.zeros(3)),
+                   (np.zeros(3), colors[1]),
+                   (colors[0], np.ones(3)),
+                   (np.ones(3), colors[1]),
+                   (np.ones(3), np.ones(3))]
+    images = [image.copy(), image.copy(), image.copy(), image.copy(), image.copy(), image.copy()]
     for image, colors in zip(images, color_combs):
         image = coloring_f(image, colors)
         imgs.append(image)

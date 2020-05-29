@@ -251,8 +251,11 @@ def white_balance(img, rgb, mask=np.ones((1, 1, 1))):
     result = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)
     lab = lab.squeeze().squeeze()
+    result = result.astype(int)
+    # result[:, :, 0] = np.where(result[:, :, 0] < 50, 0, result[:, :, 0])
     result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.1) * mask[:, :, 0]
     result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.1) * mask[:, :, 0]
-    # result = np.clip(result, 1, 254)
+    result = np.clip(result, 1, 254)
+    result = result.astype(np.uint8)
     result = cv2.cvtColor(result, cv2.COLOR_LAB2RGB)
     return result

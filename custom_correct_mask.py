@@ -20,9 +20,11 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
     gt1 = ru.gray_world_estimation(image2, 1 - mask) / 255
     corrected1 = ru.white_balance(image1, gt2, mask)
     corrected2 = ru.white_balance(image2, gt1, 1 - mask)
-    corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
-    corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
+    # corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
+    # corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
     corrected = iu.combine_images_with_mask(corrected1, corrected2, mask)
+    # gt1 = ru.gray_world_estimation(image)
+    # gt2 = gt1
     colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
 
     gt_mask = gt_mask / 255
@@ -36,14 +38,16 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
         return dis.mean()
 
     def pc_angular_difference(gt1, gt2, gti1, gti2):
-        return (ru.angular_distance(gt1, gti1) + ru.angular_distance(gt2, gti2)) / 2
+        d1 = (ru.angular_distance(gt1, gti1) + ru.angular_distance(gt2, gti2)) / 2
+        d2 = (ru.angular_distance(gt2, gti1) + ru.angular_distance(gt1, gti2)) / 2
+        return np.minimum(d1, d2)
     print(f'{idx}, {pp_angular_difference(colored_mask, gt)}, {pc_angular_difference(gt1, gt2, gti1, gti2)}')
     colored_mask2 = np.where(gt_mask > 0.5, (gti2 * 255).astype(np.uint8), (gti1 * 255).astype(np.uint8))
 
 
-    path = 'images/model_corrected_unet_cube_comb/'
-    if not os.path.exists(path):
-        os.mkdir(path)
+    # path = 'images/model_corrected_custom_cube6/'
+    # if not os.path.exists(path):
+    #     os.mkdir(path)
     pu.visualize([image, mask, colored_mask, colored_mask2, corrected, ],
                  titles=['a)', 'b)', 'c)', 'd)', 'e)'],
                  in_line=True,
@@ -65,8 +69,8 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
     # corrected2 = ru.white_balance(image2, gt1, 1 - gt_mask)
     # corrected1 = iu.color_correct_single(image1, gt2, c_ill=1/3)
     # corrected2 = iu.color_correct_single(image2, gt1, c_ill=1/3)
-    corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
-    corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
+    # corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
+    # corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
     corrected_real = iu.combine_images_with_mask(corrected1, corrected2, gt_mask)
     colored_mask2 = np.where(gt_mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
 
@@ -91,8 +95,8 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
         gt1 = ru.gray_world_estimation(image2, 1-mask) / 255
         corrected1 = ru.white_balance(image1, gt2, mask)
         corrected2 = ru.white_balance(image2, gt1, 1-mask)
-        corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
-        corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
+        # corrected1 = np.where(image1 == [0, 0, 0], (gt2 * 255).astype(np.uint8), corrected1)
+        # corrected2 = np.where(image2 == [0, 0, 0], (gt1 * 255).astype(np.uint8), corrected2)
         corrected = iu.combine_images_with_mask(corrected1, corrected2, mask)
         gt = ru.gray_world_estimation(image) / 255
         corrected1 = ru.white_balance(image, gt)
@@ -118,7 +122,7 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
 
     if draw:
         colored_mask = np.where(mask > 0.5, (gt2 * 255).astype(np.uint8), (gt1 * 255).astype(np.uint8))
-        path = 'images/model_corrected_custom_cube6/'
+        path = 'images/model_corrected_unet_cube_comb/'
         if not os.path.exists(path):
             os.mkdir(path)
         pu.visualize([image, mask, colored_mask, corrected1, corrected],
@@ -136,7 +140,7 @@ def main_process2(data):
     # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     # mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
     image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
-    mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks-custom' #if use_corrected_masks else './data/custom_mask_nocor'
+    mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks6' #if use_corrected_masks else './data/custom_mask_nocor'
     gt_mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/gt_mask'  # if use_corrected_masks else './data/custom_mask_nocor'
     gt_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/groundtruth'
     ext = '.png' if use_corrected_masks else '.jpg'
@@ -152,7 +156,7 @@ def main_process2(data):
 def main_process(data):
     use_corrected_masks = True
     image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
-    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks-custom'
+    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
     ext = '.png' if use_corrected_masks else '.jpg'
     img, gt1, gt2 = data
 

@@ -5,6 +5,16 @@ import rawpy
 import shutil
 
 
+def load_cr2(name, path = 'D:\\fax\\Dataset\\ambient', directory='PNG_1_200', mask_cube=True):
+    image = f"{path}/{directory}"
+    image_path = os.path.join(image, name)
+
+    img = rawpy.imread(image_path)
+    rgbg = img.raw_image_visible
+    rgb = img.postprocess(gamma=(1,1), no_auto_bright=True, output_bps=16, use_camera_wb=False, use_auto_wb=False)
+
+    return rgb
+
 def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True, landscape=True):
     image = f"{path}/{directory}"
     image_path = os.path.join(image, name)
