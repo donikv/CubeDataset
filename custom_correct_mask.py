@@ -156,12 +156,12 @@ def main_process2(data):
 def main_process(data):
     use_corrected_masks = True
     image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
-    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
+    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks-custom'
     ext = '.png' if use_corrected_masks else '.jpg'
     img, gt1, gt2 = data
 
     image = fu.load_png(img, path=image_path, directory='', mask_cube=False)
-    mask = fu.load_png(img, path=mask_path, directory='', mask_cube=False)
+    mask = fu.load_png(img[:-4] + ext, path=mask_path, directory='', mask_cube=False)
     cor = process_and_visualize(image, img, gt1, gt2, mask, title=img, use_estimation=True)
 
 
@@ -172,19 +172,19 @@ if __name__ == '__main__':
     except OSError:
         gt1 = None
         gt2 = None
-    # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
-    image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
+    image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
+    # image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
     mask_path = './data/custom_mask'
     image_names = os.listdir(image_path)
     images = range(1, len(image_names) + 1)
-    # images = [23]
+    image_names = ['23.jpg']
     images = list(map(lambda x: (x, gt1, gt2), image_names))
 
     num_proc = 1
 
     if num_proc < 2:
         for data in images:
-            main_process2(data)
+            main_process(data)
     else:
         with mp.Pool(8) as pool:
             pool.map(main_process, images)
