@@ -56,7 +56,7 @@ def random_colors(offset=True, desaturate=True):
 
     def desaturate_color(c):
         c = cv2.cvtColor(np.array([[c * 255]], dtype=np.uint8), cv2.COLOR_RGB2HSV)
-        rand = np.abs(np.random.normal(0, 0.25, 1)) + 0.2
+        rand = np.clip(np.random.normal(0.2, 0.1, 1), 0.2, 0.8)
         c[:, :, 1] = c[:, :, 1] * rand
         c = cv2.cvtColor(c, cv2.COLOR_HSV2RGB)
         return c.squeeze().squeeze() / 255

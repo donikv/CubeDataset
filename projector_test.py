@@ -2,6 +2,7 @@ import utlis.projector_utils as pu
 import utlis.plotting_utils as plt
 import utlis.file_utils as fu
 import utlis.image_utils as iu
+import utlis.capture_utils as cu
 
 import os
 import cv2
@@ -159,17 +160,18 @@ def debayer():
 
 def line(image, colors):
     alpha = np.random.randint(1, 89, 1) * np.pi / 180
-    alpha = 0.5
+    alpha = 0.75
     return pu.line_image(image, colors, alpha)
 
 if __name__ == '__main__':
     # size = 21
-    # images = pu.create_image(1080, 1920, 1, line)
+    cu.show_full_screen('circle-white1-0.png', 'projector_test/third/')
+    # images = pu.create_image(1080, 1920, 1, pu.triangle_image)
     # for i, image in enumerate(images):
-    #     plt.visualize([image], out_file=f'projector_test/second/line-white3-{i}.png')
+    #     plt.visualize([image], out_file=f'projector_test/third/triangle-white2-{i}.png')
     # debayer()
     # find_gt()
-    create_gt_mask()
+    # create_gt_mask()
     # dir_name = './projector_test/projector2/images'
     # images = os.listdir(dir_name)
     # # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))

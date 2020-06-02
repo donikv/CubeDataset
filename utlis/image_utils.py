@@ -32,8 +32,10 @@ def find_edges(image, lower, upper):
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
     original = image.copy()
     mask = None
-    im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    avg = int(im_bw.mean())
+    im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)\
+
+
+    avg = int(im_bw.mean()) + lower
     edges = cv2.Canny(im_bw, avg / 2, avg * 2)
     kernel = np.ones((5, 5), np.uint8)
     closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
@@ -67,7 +69,10 @@ def fill_holes(img):
     return im_out
 
 
-def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarray = np.array([100, 255, 255]), method=1, invert=False, use_conv=False):
+def cv2_contours(image,
+                 lower: np.ndarray = np.array([0, 0, 0]),
+                 upper: np.ndarray = np.array([100, 255, 255]),
+                 method=1, invert=False, use_conv=False, use_grad=True):
     image = image.astype(np.uint8)
     # blank_mask = gradient_mask(image.shape)
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
@@ -109,8 +114,11 @@ def cv2_contours(image, lower: np.ndarray = np.array([0, 0, 0]), upper: np.ndarr
         # c = cv2.approxPolyDP(c, 1, True)
         # cv2.fillConvexPoly(blank_mask, c, (255, 255, 255))
         # creating convex hull object for each contour
-        # cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), thickness=-1)
-        blank_mask = gradient_fill(c, blank_mask)
+        #
+        if use_grad:
+            blank_mask = gradient_fill(c, blank_mask)
+        else:
+            cv2.drawContours(blank_mask, [c], -1, (255, 255, 255), thickness=-1)
         # h = (cv2.convexHull(c, False))
         # cv2.drawContours(blank_mask1, [h], -1, (255, 255, 255), -1)
         start = c[0][0]

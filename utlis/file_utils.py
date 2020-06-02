@@ -73,7 +73,7 @@ def create_valid_set(path='./data/relighted'):
         os.mkdir(valid_path)
     for folder in folders:
         image_names = os.listdir(f'{path}/{folder}/')
-        last = int(len(image_names) * 0.8)
+        last = int(len(image_names) * 0.9)
         valid_images = image_names[last:len(image_names) - 1]
         valid_folder = os.path.join(valid_path, folder)
         if not os.path.exists(valid_folder):

@@ -26,7 +26,7 @@ def get_ill_diffs():
     return gt_diff_filter
 
 
-def process_with_edges(img, gtLoader, folder_step, use_edges):
+def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad):
     image = fu.load(img, folder_step, depth=14)
     height, width, _ = image.shape
     image = cv2.resize(image, (int(width / 5), int(height / 5)))
@@ -34,14 +34,14 @@ def process_with_edges(img, gtLoader, folder_step, use_edges):
     image_cor = iu.color_correct_single(image, c_ill=1, u_ill=gtLoader[img - 1])
     if use_edges:
         edges, closing = iu.find_edges(image_cor, 100, 200)
-        contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([90, 255, 255]))
+        contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([90, 255, 255]), use_grad=use_grad)
     else:
-        contours, mask, identation_index = iu.cv2_contours(image_cor, method=1, upper=np.array([30, 255, 255]), invert=True)
+        contours, mask, identation_index = iu.cv2_contours(image_cor, method=1, upper=np.array([30, 255, 255]), invert=True, use_grad=use_grad)
 
     # if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
     #     return False, image, mask, None
 
-    if identation_index < 12.5:
+    if identation_index < 10:
         print(identation_index)
         return False, image, None, None, None, mask
 
@@ -62,16 +62,18 @@ def main_process(data):
     draw = False
     save = True
     use_edges = False
-    succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges)
+    use_grad = False
+    succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges, use_grad)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask, mask], title=img)
         if save:
-            cv2.imwrite(f'./data/relighted/images/{img}-8-grad.png', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt/{img}-8-grad.png', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/gt_mask/{img}-8-grad.png',
+            name = f'{img}-8{"-grad" if use_grad else ""}{"-edg" if use_edges else ""}.png'
+            cv2.imwrite(f'./data/relighted/images/{name}', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt/{name}', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(f'./data/relighted/gt_mask/{name}',
                         cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(f'./data/relighted/img_corrected_1/{img}-8-grad.png',
+            cv2.imwrite(f'./data/relighted/img_corrected_1/{name}',
                         cv2.cvtColor(relighted1, cv2.COLOR_RGB2BGR))
             print(f'Saved {img}')
     else:
@@ -90,7 +92,7 @@ if __name__ == '__main__':
     for img_folder in folders:
         if not os.path.exists(img_folder):
             os.mkdir(img_folder)
-    num_threads = 16
+    num_threads = 8
     if num_threads < 2:
         for data in single_ill_gt:
             main_process(data)
