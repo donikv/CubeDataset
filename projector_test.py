@@ -165,7 +165,14 @@ def line(image, colors):
 
 if __name__ == '__main__':
     # size = 21
-    cu.show_full_screen('circle-white1-0.png', 'projector_test/third/')
+    dir = 'projector_test/third/'
+    images = os.listdir(dir)
+    for image in images:
+        window = cu.show_full_screen(image, dir)
+        k = cv2.waitKey(3000)
+        if k != -1:
+            exit()
+        cv2.destroyWindow(window)
     # images = pu.create_image(1080, 1920, 1, pu.triangle_image)
     # for i, image in enumerate(images):
     #     plt.visualize([image], out_file=f'projector_test/third/triangle-white2-{i}.png')

@@ -139,10 +139,10 @@ def main_process2(data):
     use_corrected_masks = True
     # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     # mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
-    image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
-    mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/pmasks6' #if use_corrected_masks else './data/custom_mask_nocor'
-    gt_mask_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/gt_mask'  # if use_corrected_masks else './data/custom_mask_nocor'
-    gt_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/groundtruth'
+    image_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/images'
+    mask_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/pmasks' #if use_corrected_masks else './data/custom_mask_nocor'
+    gt_mask_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/gt_mask'  # if use_corrected_masks else './data/custom_mask_nocor'
+    gt_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/gt'
     ext = '.png' if use_corrected_masks else '.jpg'
     img, gt1, gt2 = data
 
@@ -172,19 +172,20 @@ if __name__ == '__main__':
     except OSError:
         gt1 = None
         gt2 = None
-    image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
+    # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     # image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
+    image_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/images'
     mask_path = './data/custom_mask'
     image_names = os.listdir(image_path)
     images = range(1, len(image_names) + 1)
-    image_names = ['23.jpg']
+    # image_names = ['23.jpg']
     images = list(map(lambda x: (x, gt1, gt2), image_names))
 
     num_proc = 1
 
     if num_proc < 2:
         for data in images:
-            main_process(data)
+            main_process2(data)
     else:
         with mp.Pool(8) as pool:
             pool.map(main_process, images)
