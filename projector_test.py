@@ -11,11 +11,14 @@ import multiprocessing as mp
 import time
 from skimage.filters import gaussian
 
-def saveImage(image, dir, name):
+def saveImage(image, dir, name, convert_rgb_2_bgr=True):
     if not os.path.exists(dir):
         os.mkdir(dir)
     pth = os.path.join(dir, f'{name}.png')
-    cv2.imwrite(pth, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+    if convert_rgb_2_bgr:
+        r, g, b = cv2.split(image)
+        image = np.dstack((b, g, r))
+    cv2.imwrite(pth, image)
 
 def correct(data):
     dir_name = './projector_test/projector2/images'
@@ -90,9 +93,9 @@ def find_gt():
         # image = cv2.resize(image, (0, 0), fx = 1/5, fy = 1/5)
         gts_left.append(gt_left)
         gts_right.append(gt_right)
-        saveImage(image, f'{dir}/both/images', idx+1)
-        saveImage(image_l, f'{dir}/ambient/images', idx+1)
-        saveImage(image_r, f'{dir}/direct/images', idx+1)
+        saveImage(image, f'{dir}/both/images', idx+1, False)
+        saveImage(image_l, f'{dir}/ambient/images', idx+1, False)
+        saveImage(image_r, f'{dir}/direct/images', idx+1, False)
     np.savetxt(f'{dir}/gt_left.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
     np.savetxt(f'{dir}/gt_right.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
 
@@ -114,7 +117,7 @@ def par_create(data):
     gt_right = np.clip(gts_right[idx], 1, 255) / 255
     gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left)
     ggt_mask = gt_mask#pu.denoise_mask(gt_mask)
-    saveImage(ggt_mask.astype(np.uint8), f'{dir}/../gt_mask/', idx + 1)
+    saveImage(ggt_mask.astype(np.uint8), f'{dir}/gt_mask/', idx + 1)
     # gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
     # cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/gt_mask/{idx + 1}lr.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
 
