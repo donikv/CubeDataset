@@ -5,9 +5,9 @@ import cv2
 import numpy as np
 import multiprocessing as mp
 
-import utlis.image_utils as iu
-import utlis.groundtruth_utils as gu
-import utlis.file_utils as fu
+import utils.image_utils as iu
+import utils.groundtruth_utils as gu
+import utils.file_utils as fu
 
 
 

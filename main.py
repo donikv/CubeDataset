@@ -4,12 +4,12 @@ import rawpy
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from utlis.file_utils import load_image, load_png, load
-from utlis.image_utils import color_correct, cv2_contours, color_correct_single, process_image, \
+from utils.file_utils import load_image, load_png, load
+from utils.image_utils import color_correct, cv2_contours, color_correct_single, process_image, \
     adjust_gamma
-from utlis.plotting_utils import visualize, plot_counturs
-from utlis.groundtruth_utils import GroundtruthLoader
-from utlis.relighting_utils import random_colors, angular_distance
+from utils.plotting_utils import visualize, plot_counturs
+from utils.groundtruth_utils import GroundtruthLoader
+from utils.relighting_utils import random_colors, angular_distance
 
 gtLoader = GroundtruthLoader('cube+_gt.txt')
 gts = gtLoader.gt

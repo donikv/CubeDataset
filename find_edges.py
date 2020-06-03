@@ -1,11 +1,11 @@
 import cv2
 import os
 
-from utlis import file_utils as fu
-import utlis.image_utils as iu
-import utlis.plotting_utils as pu
-import utlis.relighting_utils as ru
-from utlis.groundtruth_utils import GroundtruthLoader
+from utils import file_utils as fu
+import utils.image_utils as iu
+import utils.plotting_utils as pu
+import utils.relighting_utils as ru
+from utils.groundtruth_utils import GroundtruthLoader
 import numpy as np
 import multiprocessing as mp
 

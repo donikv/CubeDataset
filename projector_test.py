@@ -1,8 +1,8 @@
-import utlis.projector_utils as pu
-import utlis.plotting_utils as plt
-import utlis.file_utils as fu
-import utlis.image_utils as iu
-import utlis.capture_utils as cu
+import utils.projector_utils as pu
+import utils.plotting_utils as plt
+import utils.file_utils as fu
+import utils.image_utils as iu
+import utils.capture_utils as cu
 
 import os
 import cv2
@@ -169,23 +169,8 @@ if __name__ == '__main__':
     images = os.listdir(dir)
     for image in images:
         window = cu.show_full_screen(image, dir)
-        k = cv2.waitKey(3000)
+        k = cv2.waitKey(1000)
         if k != -1:
             exit()
+        cu.capture_from_camera(f"/media/donik/Disk/captures/{image[:-4]}.cr2")
         cv2.destroyWindow(window)
-    # images = pu.create_image(1080, 1920, 1, pu.triangle_image)
-    # for i, image in enumerate(images):
-    #     plt.visualize([image], out_file=f'projector_test/third/triangle-white2-{i}.png')
-    # debayer()
-    # find_gt()
-    # create_gt_mask()
-    # dir_name = './projector_test/projector2/images'
-    # images = os.listdir(dir_name)
-    # # images = list(filter(lambda x: str(x).lower().endswith('.jpg'), images))
-    #
-    # gts_left = np.loadtxt('./projector_test/projector2/gt_left.txt')
-    # data = list(map(lambda x: (x, gts_left), images))
-    #
-    # with mp.Pool(16) as p:
-    #     p.map(correct, data)
-    #     print('done')
