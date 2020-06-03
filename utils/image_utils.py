@@ -32,10 +32,12 @@ def find_edges(image, lower, upper):
     blank_mask = np.zeros(image.shape, dtype=np.uint8)
     original = image.copy()
     mask = None
-    im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)\
-
-
-    avg = int(im_bw.mean()) + lower
+    im_bw = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    p = np.random.random(1)
+    if p > 0.5:
+        avg = int(im_bw.mean() - lower * np.random.normal(1, 0.2, 1))
+    else:
+        avg = int(im_bw.mean() - upper * np.random.normal(1, 0.2, 1))
     edges = cv2.Canny(im_bw, avg / 2, avg * 2)
     kernel = np.ones((5, 5), np.uint8)
     closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
@@ -70,8 +72,8 @@ def fill_holes(img):
 
 
 def cv2_contours(image,
-                 lower: np.ndarray = np.array([0, 0, 0]),
-                 upper: np.ndarray = np.array([100, 255, 255]),
+                 lower: np.ndarray = np.array([10, 0, 0]),
+                 upper: np.ndarray = np.array([10, 255, 255]),
                  method=1, invert=False, use_conv=False, use_grad=True):
     image = image.astype(np.uint8)
     # blank_mask = gradient_mask(image.shape)
@@ -86,6 +88,11 @@ def cv2_contours(image,
         avg = im_bw.mean()
         if not invert:
             avg = 255 - avg
+        p = np.random.random(1)
+        if p > 0.5:
+            avg = int(avg - lower[0] * np.random.normal(1, 0.2, 1))
+        else:
+            avg = int(avg - upper[0] * np.random.normal(1, 0.2, 1))
         (thresh, mask) = cv2.threshold(im_bw, avg, 255, 0)
     else:
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)

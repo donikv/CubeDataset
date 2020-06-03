@@ -7,19 +7,30 @@ import cv2
 from statistics import mode
 
 
-def create_image(height, width, gradient, coloring_f):
+def create_image(height, width, invert_colors, coloring_f):
     image = np.zeros((height, width, 3))
     colors = ru.random_colors(desaturate=False)
     imgs = []
-    color_combs = [colors,
+    # color_combs = [colors,
+    #                (colors[0], np.zeros(3)),
+    #                (np.ones(3), np.zeros(3)),
+    #                (np.zeros(3), colors[1]),
+    #                (np.zeros(3), np.ones(3)),
+    #                # (np.ones(3), np.ones(3))
+    #                ]
+    reducer = 0.5
+    ambient = np.array([255, 215, 0]) / 255
+    color_combs = [(colors[0], ambient * reducer),
                    (colors[0], np.zeros(3)),
-                   (np.ones(3), np.zeros(3)),
-                   (np.zeros(3), colors[1]),
-                   (np.zeros(3), np.ones(3)),
-                   # (np.ones(3), np.ones(3))
+                   (np.zeros(3), ambient * reducer),
+                   (colors[1], ambient * reducer),
+                   (colors[1], np.zeros(3)),
+                   (np.zeros(3), ambient * reducer),
                    ]
-    images = [image.copy(), image.copy(), image.copy(), image.copy(), image.copy(), image.copy()]
+    images = [image.copy() for _ in color_combs]
     for image, colors in zip(images, color_combs):
+        if invert_colors:
+            colors = (colors[1], colors[0])
         image = coloring_f(image, colors)
         imgs.append(image)
     return imgs
@@ -76,7 +87,7 @@ def create_gt_mask(image, image_right, image_left, gt_right, gt_left, allwhite=N
     img_right_norm = (image_right * 3 / np.sqrt(3))
     # img_right_norm = cv2.cvtColor(img_right_norm, cv2.COLOR_RGB2HLS) #dodano
     # img_right_norm[:, :, 1] = img_right_norm[:, :, 1] + 1
-    thresh = 500#mode(image[:,:,1].reshape(-1, 1))
+    thresh = 0#mode(image[:,:,1].reshape(-1, 1))
     img_right_norm[:, :, 1] = np.where(img_right_norm[:, :, 1] < thresh, 0, img_right_norm[:, :, 1])
     # img_left_norm = iu.color_correct_single(image_left, gt_left, c_ill=1/np.sqrt(3))
     img_left_norm = (image_left * 3 / np.sqrt(3))

@@ -10,6 +10,8 @@ def show_full_screen(image, path, duration=3):
 
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    r, g, b = cv2.split(image)
+    image = np.dstack((b, g, r))
 
     window = "window"
     cv2.namedWindow(window, cv2.WND_PROP_FULLSCREEN)
@@ -23,30 +25,10 @@ def capture_from_camera(filename):
     camera = gp.Camera()
     context = gp.Context()
     context.camera_autodetect()
-    camera.init()
-    text = camera.get_summary()
+    camera.init(context)
+    text = camera.get_summary(context)
     path = camera.capture(gp.GP_CAPTURE_IMAGE, context)
     file = camera.file_get(path.folder, path.name, gp.GP_FILE_TYPE_NORMAL, context)
     file.save(filename)
     buf = file.get_data_and_size()
     camera.exit()
-    return
-
-    cap = cv2.VideoCapture(0)
-    while True:
-        captured, frame = cap.read()
-        # cv2.imshow('frame', frame)
-        if captured:
-            return frame
-
-    # t00 = time.time()
-    # while True:
-    #     _, frame = cap.read()
-    #     cv2.imshow('frame', frame)
-    #     return frame
-    #     k = cv2.waitKey(5) & 0xFF
-    #     t01 = time.time()
-    #     print("{} fps, size: {}".format(int(1. / (t01 - t00)), frame.shape))
-    #     t00 = time.time()
-    #     if k == 27:
-    #         break

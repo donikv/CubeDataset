@@ -33,10 +33,10 @@ def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad):
     image = iu.process_image(image, 14)
     image_cor = iu.color_correct_single(image, c_ill=1, u_ill=gtLoader[img - 1])
     if use_edges:
-        edges, closing = iu.find_edges(image_cor, 100, 200)
-        contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([90, 255, 255]), use_grad=use_grad)
+        edges, closing = iu.find_edges(image_cor, 10, 10)
+        contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([10, 255, 255]), use_grad=use_grad)
     else:
-        contours, mask, identation_index = iu.cv2_contours(image_cor, method=1, upper=np.array([30, 255, 255]), invert=True, use_grad=use_grad)
+        contours, mask, identation_index = iu.cv2_contours(image_cor, method=1, upper=np.array([10, 255, 255]), invert=True, use_grad=use_grad)
 
     # if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
     #     return False, image, mask, None
@@ -48,7 +48,9 @@ def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad):
     ill1, ill2 = ru.random_colors()
     relighted = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
                                  c_ill=1/3)
-    relighted1 = iu.color_correct(image_cor, mask=mask, ill1=ill2 / ill1, ill2=np.ones(3),
+    p = 0#np.random.random(1)
+    i1, i2 = (ill2/ill1, np.ones(3)) if p > 0.5 else (np.ones(3), ill1/ill2)
+    relighted1 = iu.color_correct(image_cor, mask=mask, ill1=i1, ill2=i2,
                                  c_ill=1/3)
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
@@ -61,14 +63,14 @@ def main_process(data):
     folder_step = 200
     draw = False
     save = True
-    use_edges = False
-    use_grad = False
+    use_edges = True
+    use_grad = True
     succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges, use_grad)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask, mask], title=img)
         if save:
-            name = f'{img}-8{"-grad" if use_grad else ""}{"-edg" if use_edges else ""}.png'
+            name = f'{img}-9{"-grad" if use_grad else ""}{"-edg" if use_edges else ""}.png'
             cv2.imwrite(f'./data/relighted/images/{name}', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
             cv2.imwrite(f'./data/relighted/gt/{name}', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
             cv2.imwrite(f'./data/relighted/gt_mask/{name}',
