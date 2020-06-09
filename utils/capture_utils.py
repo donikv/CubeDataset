@@ -2,7 +2,8 @@ import cv2
 import os
 import numpy as np
 import time
-import gphoto2 as gp
+if os.name != 'nt':
+    import gphoto2 as gp
 
 
 def show_full_screen(image, path, duration=3):

@@ -57,30 +57,39 @@ def crop(data):
         cv2.imwrite(f'./projector_test/projector1_cropped_resized/{name}/{idx + 1}.png', cv2.cvtColor(cropped, cv2.COLOR_RGB2BGR))
 
 
-def find_gt():
-    dir = 'G:\\fax\\diplomski\\Datasets\\third\\ambient'
+def find_gt(fax=False):
+    if fax:
+        dir = "/media/donik/Disk/ambient3"
+    else:
+        dir = 'G:\\fax\\diplomski\\Datasets\\third\\ambient3'
     dir_name = f'{dir}/both'
     dir_name_left = f'{dir}/ambient'
     dir_name_right = f'{dir}/direct'
     images = os.listdir(dir_name)
     images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
+    images_del = list(filter(lambda x: str(x).lower().startswith('cup-'), images))
+    images = list(filter(lambda x: not str(x).lower().startswith('cup-'), images))
 
     gts_left, gts_right = [], []
     for idx, img in enumerate(images):
         img_idx = int(img[-5])
         img_name_base = img[:-5]
         image = fu.load_png(img, dir_name, '', mask_cube=False)
-        image = iu.process_image(image, depth=16, blacklevel=2048)
+        image = iu.process_image(image, depth=16, blacklevel=0)
         image_r = fu.load_png(img_name_base + str(img_idx+2) + '.png', dir_name_right, '', mask_cube=False)
-        image_r = iu.process_image(image_r, depth=16, blacklevel=2048)
+        image_r = iu.process_image(image_r, depth=16, blacklevel=0)
         image_l = fu.load_png(img_name_base + str(img_idx+1) + '.png', dir_name_left, '', mask_cube=False)
-        image_l = iu.process_image(image_l, depth=16, blacklevel=2048)
+        image_l = iu.process_image(image_l, depth=16, blacklevel=0)
         gt_left, gt_right = np.zeros(3), np.zeros(3)
         n = 20
         for i in range(n):
             for j in range(n):
-                x1, y1 = 3241, 1955#3861, 1912#1200, 2450
-                x2, y2 = 3092, 1974#1368, 2217 #1350, 2450
+                if idx >= 40:
+                    x1, y1 = 967, 1688
+                    x2, y2 = 4598, 1573
+                else:
+                    x1, y1 = 770, 1672#1379, 2336 #3241, 1955#3861, 1912#1200, 2450
+                    x2, y2 = 4723, 1535#3803, 2481#3092, 1974#1368, 2217 #1350, 2450
                 # if idx < 39 or idx > 43:
                 #     x1, y1 = 1152, 1812
                 #     x2, y2 = 4278, 1647
@@ -93,16 +102,16 @@ def find_gt():
         # image = cv2.resize(image, (0, 0), fx = 1/5, fy = 1/5)
         gts_left.append(gt_left)
         gts_right.append(gt_right)
-        saveImage(image, f'{dir}/both/images', idx+1, False)
-        saveImage(image_l, f'{dir}/ambient/images', idx+1, False)
-        saveImage(image_r, f'{dir}/direct/images', idx+1, False)
+        saveImage(image, f'{dir}/both/images', idx+1)
+        saveImage(image_l, f'{dir}/ambient/images', idx+1)
+        saveImage(image_r, f'{dir}/direct/images', idx+1)
     np.savetxt(f'{dir}/gt_left.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
     np.savetxt(f'{dir}/gt_right.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
 
 
 def par_create(data):
-    idx, img, gts_left, gts_right = data
-    dir = 'G:\\fax\\diplomski\\Datasets\\third\\ambient'
+    idx, img, gts_left, gts_right, dir = data
+    # dir = 'G:\\fax\\diplomski\\Datasets\\third\\ambient2'
     dir_name = f'{dir}/both/images'
     dir_name_left = f'{dir}/ambient/images'
     dir_name_right = f'{dir}/direct/images'
@@ -122,14 +131,17 @@ def par_create(data):
     # cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/gt_mask/{idx + 1}lr.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
 
 
-def create_gt_mask():
-    dir = 'G:\\fax\\diplomski\\Datasets\\third\\ambient'
+def create_gt_mask(fax=False):
+    if fax:
+        dir = "/media/donik/Disk/ambient3"
+    else:
+        dir = 'G:\\fax\\diplomski\\Datasets\\third\\ambient3'
     dir_name = f'{dir}/both/images'
     images = os.listdir(dir_name)
     images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
     gts_left = np.loadtxt(f'{dir}/gt_left.txt')
     gts_right = np.loadtxt(f'{dir}/gt_right.txt')
-    data = list(map(lambda x: (int(x[:-4])-1, x, gts_left, gts_right), images))
+    data = list(map(lambda x: (int(x[:-4])-1, x, gts_left, gts_right, dir), images))
 
     num_proc = 1
 
@@ -141,7 +153,6 @@ def create_gt_mask():
 
     for d in data:
         par_create(d)
-
 
 def debayer():
     dir_name = 'D:\\fax\\Dataset\\two_ill/'
@@ -163,46 +174,9 @@ def debayer():
 
 
 
-def debayer_single(img, dir_name):
-    imageRaw = fu.load_cr2(img, path=dir_name, directory='', mask_cube=False)
-    rgb = cv2.cvtColor(imageRaw, cv2.COLOR_RGB2BGR) #  cv2.cvtColor(imageRaw, cv2.COLOR_BAYER_RG2BGR)
-    return rgb
-
-
-def line(image, colors):
-    alpha = np.random.randint(1, 89, 1) * np.pi / 180
-    alpha = 0.5
-    return pu.line_image(image, colors, alpha)
-
 if __name__ == '__main__':
-    find_gt()
-    create_gt_mask()
-    exit()
-
-    dir = 'projector_test/third/ambient'
-    for it in range(1, 10):
-        images = pu.create_image(1080, 1920, False, line)
-        for i, image in enumerate(images):
-            saveImage(image, dir, f'ambient-line-white{it}-{i}')
-            # plt.visualize([image], out_file=f'projector_test/third/triangle-white2-{i}.png')
-        # size = 21
-    time.sleep(5)
-    # dir = 'projector_test/third/ambient'
-    dir2 = "/media/donik/Disk/captures/"
-    dir3 = "/media/donik/Disk/ambient/"
-
-    folds = ['both', 'left', 'black_left', 'right', 'black_right']
-    folds_ambient = ['both', 'ambient', 'direct', 'both', 'ambient', 'direct']
-    images = os.listdir(dir)
-    for image in images:
-        window = cu.show_full_screen(image, dir)
-        k = cv2.waitKey(1000)
-        if k != -1:
-            exit()
-        img_name = "cup-" + image[:-4]
-        cu.capture_from_camera(f"{dir2}/{img_name}.cr2")
-        cv2.destroyWindow(window)
-
-        deb_img = debayer_single(img_name + ".cr2", dir2)
-        saveImage(deb_img, dir3 + folds_ambient[int(image[-5])], img_name)
+    fax = os.name != 'nt'
+    find_gt(fax)
+    create_gt_mask(fax)
+    # exit()
 

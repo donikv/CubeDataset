@@ -6,13 +6,13 @@ from skimage.filters import gaussian
 from utils.plotting_utils import visualize
 
 def process_image(img: np.ndarray, depth=14, blacklevel=2048):
-    saturationLevel = img.max() - 2
+    saturationLevel = img.max() #- 2
     img = img.astype(int)
     img = np.clip(img - blacklevel, a_min=0, a_max=np.infty).astype(int)
     m = np.where(img >= saturationLevel - blacklevel, 1, 0).sum(axis=2, keepdims=True)
     max_val = np.iinfo(np.int32).max
-    m = np.where(m > 0, [0, 0, 0], [max_val, max_val, max_val])
-    result = cv2.bitwise_and(img, m)
+    m = np.where(m > 1, [0, 0, 0], [max_val, max_val, max_val])
+    result = img#cv2.bitwise_and(img, m)
 
     return (result / 2**depth * 255).astype(np.uint8)
 

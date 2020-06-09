@@ -11,22 +11,23 @@ def create_image(height, width, invert_colors, coloring_f):
     image = np.zeros((height, width, 3))
     colors = ru.random_colors(desaturate=False)
     imgs = []
-    # color_combs = [colors,
-    #                (colors[0], np.zeros(3)),
-    #                (np.ones(3), np.zeros(3)),
-    #                (np.zeros(3), colors[1]),
-    #                (np.zeros(3), np.ones(3)),
-    #                # (np.ones(3), np.ones(3))
-    #                ]
-    reducer = 0.5
-    ambient = np.array([255, 215, 0]) / 255
-    color_combs = [(colors[0], ambient * reducer),
+    color_combs = [colors,
                    (colors[0], np.zeros(3)),
-                   (np.zeros(3), ambient * reducer),
-                   (colors[1], ambient * reducer),
+                   (np.zeros(3), colors[1]),
+                   (colors[1], colors[0]),
                    (colors[1], np.zeros(3)),
-                   (np.zeros(3), ambient * reducer),
+                   (np.zeros(3), colors[0]),
+                   # (np.ones(3), np.ones(3))
                    ]
+    # reducer = 1
+    # ambient = np.array([255, 215, 0]) / 255
+    # color_combs = [(colors[0], ambient * reducer),
+    #                (colors[0], np.zeros(3)),
+    #                (np.zeros(3), ambient * reducer),
+    #                (colors[1], ambient * reducer),
+    #                (colors[1], np.zeros(3)),
+    #                (np.zeros(3), ambient * reducer),
+    #                ]
     images = [image.copy() for _ in color_combs]
     for image, colors in zip(images, color_combs):
         if invert_colors:
