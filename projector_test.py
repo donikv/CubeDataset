@@ -85,8 +85,11 @@ def find_gt(fax=False):
         for i in range(n):
             for j in range(n):
                 if idx >= 40:
-                    x1, y1 = 967, 1688
-                    x2, y2 = 4598, 1573
+                    x1, y1 = 928, 1844
+                    x2, y2 = 4659, 1762
+                elif idx >= 20:
+                    x1, y1 = 720, 1850
+                    x2, y2 = 4785, 1737
                 else:
                     x1, y1 = 770, 1672#1379, 2336 #3241, 1955#3861, 1912#1200, 2450
                     x2, y2 = 4723, 1535#3803, 2481#3092, 1974#1368, 2217 #1350, 2450
@@ -110,7 +113,7 @@ def find_gt(fax=False):
 
 
 def par_create(data):
-    idx, img, gts_left, gts_right, dir = data
+    idx, img, gts_left, gts_right, dir, tresh = data
     # dir = 'G:\\fax\\diplomski\\Datasets\\third\\ambient2'
     dir_name = f'{dir}/both/images'
     dir_name_left = f'{dir}/ambient/images'
@@ -124,7 +127,7 @@ def par_create(data):
     image_right = cv2.resize(image_right, (0, 0), fx=1 / 5, fy=1 / 5)
     gt_left = np.clip(gts_left[idx], 1, 255) / 255
     gt_right = np.clip(gts_right[idx], 1, 255) / 255
-    gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left)
+    gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left, thresh=tresh)
     ggt_mask = gt_mask#pu.denoise_mask(gt_mask)
     saveImage(ggt_mask.astype(np.uint8), f'{dir}/gt_mask/', idx + 1)
     # gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
@@ -141,9 +144,9 @@ def create_gt_mask(fax=False):
     images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
     gts_left = np.loadtxt(f'{dir}/gt_left.txt')
     gts_right = np.loadtxt(f'{dir}/gt_right.txt')
-    data = list(map(lambda x: (int(x[:-4])-1, x, gts_left, gts_right, dir), images))
+    data = list(map(lambda x: (int(x[:-4])-1, x, gts_left, gts_right, dir, 14), images))
 
-    num_proc = 1
+    num_proc = 8
 
     if num_proc > 1:
         with mp.Pool(num_proc) as p:
@@ -176,7 +179,7 @@ def debayer():
 
 if __name__ == '__main__':
     fax = os.name != 'nt'
-    find_gt(fax)
+    # find_gt(fax)
     create_gt_mask(fax)
-    # exit()
+    exit()
 

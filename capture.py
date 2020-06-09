@@ -23,7 +23,7 @@ def saveImage(image, dir, name, convert_rgb_2_bgr=True):
 
 def debayer_single(img, dir_name):
     if img.endswith('tiff'):
-        image_tiff = cv2.imread(f'{dir_name}{image}', cv2.IMREAD_UNCHANGED)
+        image_tiff = cv2.imread(f'{dir_name}{img}', cv2.IMREAD_UNCHANGED)
         imageRaw = cv2.cvtColor(image_tiff, cv2.COLOR_BAYER_RG2BGR)
     else:
         imageRaw = fu.load_cr2(img, path=dir_name, directory='', mask_cube=False)
@@ -37,7 +37,22 @@ def line(image, colors):
     return pu.line_image(image, colors, alpha)
 
 
+def process_tiffs():
+    dir2 = 'G:\\fax\\diplomski\\Datasets\\third\\captures/'
+    dir3 = 'G:\\fax\\diplomski\\Datasets\\third\\ambient3/'
+
+    folds = ['both', 'left', 'black_left', 'right', 'black_right']
+    folds_ambient = ['both', 'ambient', 'direct', 'both', 'ambient', 'direct']
+    images = os.listdir(dir2)
+    images = list(filter(lambda x: x.startswith('cupcoffee-ambient-line-white0-0') and x.endswith('.tiff'), images))
+    for img_name in images:
+        deb_img = debayer_single(img_name, dir2)
+        saveImage(deb_img, dir3 + folds_ambient[int(img_name[-6])], img_name[:-5])
+
+
 if __name__ == '__main__':
+    process_tiffs()
+    exit()
     use_tiff = True
     dir = 'projector_test/third/ambient3'
     date = datetime.date(datetime.now())
@@ -60,7 +75,7 @@ if __name__ == '__main__':
         k = cv2.waitKey(1000)
         if k != -1:
             exit()
-        img_name = "cupcoffee-" + image[:-4]
+        img_name = "rem" + image[:-4]
         cu.capture_from_camera(f"{dir2}/{img_name}.cr2")
         cv2.destroyWindow(window)
 
