@@ -12,8 +12,14 @@ import numpy as np
 import multiprocessing as mp
 
 
-def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
-    mask = gaussian(mask, 3)
+def process_with_real_and_predicted(image, idx, mask, gt_mask, gt, draw=False):
+    image = cv2.resize(image, (0, 0), fx=1 / 5, fy=1 / 5)
+    if image.dtype:
+        image = (image / 2**14 * 255).astype(np.uint8)
+    # mask = cv2.resize(mask, (0, 0), fx=1 / 5, fy=1 / 5)
+    gt = cv2.resize(gt, (0, 0), fx=1 / 5, fy=1 / 5)
+    # gt_mask = cv2.resize(gt_mask, (0, 0), fx=1 / 5, fy=1 / 5)
+    # mask = gaussian(mask, 3)
     image1 = iu.mask_image(image, mask)
     image2 = iu.mask_image(image, 1 - mask)
     gt2 = ru.gray_world_estimation(image1, mask) / 255
@@ -41,21 +47,24 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
         d1 = (ru.angular_distance(gt1, gti1) + ru.angular_distance(gt2, gti2)) / 2
         d2 = (ru.angular_distance(gt2, gti1) + ru.angular_distance(gt1, gti2)) / 2
         return np.minimum(d1, d2)
-    print(f'{idx}, {pp_angular_difference(colored_mask, gt)}, {pc_angular_difference(gt1, gt2, gti1, gti2)}')
+    pp = pp_angular_difference(colored_mask, gt)
+    pc = pc_angular_difference(gt1, gt2, gti1, gti2)
+    print(f'{idx}, {pp}, {pc}')
     colored_mask2 = np.where(gt_mask > 0.5, (gti2 * 255).astype(np.uint8), (gti1 * 255).astype(np.uint8))
 
 
     # path = 'images/model_corrected_custom_cube6/'
     # if not os.path.exists(path):
     #     os.mkdir(path)
-    pu.visualize([image, mask, colored_mask, colored_mask2, corrected, ],
-                 titles=['a)', 'b)', 'c)', 'd)', 'e)'],
-                 in_line=True,
-                 # out_file=f'{path}{idx}',
-                 # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
-                 # title=title
-                 )
-    return
+    if draw:
+        pu.visualize([image, mask, colored_mask, colored_mask2, corrected, ],
+                     titles=['a)', 'b)', 'c)', 'd)', 'e)'],
+                     in_line=True,
+                     # out_file=f'{path}{idx}',
+                     # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
+                     # title=title
+                     )
+    return [pp, pc]
 
     image1 = iu.mask_image(image, gt_mask)
     image2 = iu.mask_image(image, 1 - gt_mask)
@@ -82,12 +91,16 @@ def process_with_real_and_predicted(image, idx, mask, gt_mask, gt):
     #              # title=title
     #              )
 
-
+def process_and_viusalize_colored_mask(image, mask):
+    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
+    corrected = np.where(image > 0, image / mask * 1 / 3, [0,0,0])
+    pu.visualize([image, mask, corrected])
+    return corrected
 
 def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, use_estimation=False):
     # image = cv2.resize(image, (0, 0), fx=1 / 5, fy=1 / 5)
     # mask = cv2.resize(mask, (0, 0), fx=1 / 5, fy=1 / 5)
-    mask = gaussian(mask, 3)
+    # mask = gaussian(mask, 3)
     if use_estimation:
         image1 = iu.mask_image(image, mask)
         image2 = iu.mask_image(image, 1-mask)
@@ -128,7 +141,7 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
         pu.visualize([image, mask, colored_mask, corrected1, corrected],
                      titles=['a)', 'b)', 'c)', 'd)', 'e)'],
                      in_line=True,
-                     out_file=f'{path}{idx}',
+                     # out_file=f'{path}{idx}',
                      # custom_transform=lambda x: cv2.flip(x.transpose(1, 0, 2), 1),
                      # title=title
                      )
@@ -137,33 +150,33 @@ def process_and_visualize(image, idx, gts1, gts2, mask, title=None, draw=True, u
 
 def main_process2(data):
     use_corrected_masks = True
+    base = 'D:/fax/diplomski/Datasets/test_images_two_ill'
     # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     # mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks'
-    image_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/images'
-    mask_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/pmasks' #if use_corrected_masks else './data/custom_mask_nocor'
-    gt_mask_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/gt_mask'  # if use_corrected_masks else './data/custom_mask_nocor'
-    gt_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/gt'
-    ext = '.png' if use_corrected_masks else '.jpg'
+    image_path = f'{base}/images'
+    mask_path = f'{base}/masks' #if use_corrected_masks else './data/custom_mask_nocor'
+    gt_mask_path = f'{base}/gt_mask'  # if use_corrected_masks else './data/custom_mask_nocor'
+    gt_path = f'{base}/gt'
     img, gt1, gt2 = data
 
     image = fu.load_png(img, path=image_path, directory='', mask_cube=False)
     mask = fu.load_png(img, path=mask_path, directory='', mask_cube=False)
     gt_mask = fu.load_png(img, path=gt_mask_path, directory='', mask_cube=False)
     gt = fu.load_png(img, path=gt_path, directory='', mask_cube=False)
-    process_with_real_and_predicted(image, img, mask, gt_mask, gt)
+    return process_with_real_and_predicted(image, img, mask, gt_mask, gt)
 
 
 def main_process(data):
-    use_corrected_masks = True
+    use_corrected_masks = False
     image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
-    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/pmasks-custom'
+    mask_path = '../MultiIlluminant-Utils/data/test/whatsapp/masks-reg'
     ext = '.png' if use_corrected_masks else '.jpg'
     img, gt1, gt2 = data
 
     image = fu.load_png(img, path=image_path, directory='', mask_cube=False)
     mask = fu.load_png(img[:-4] + ext, path=mask_path, directory='', mask_cube=False)
     cor = process_and_visualize(image, img, gt1, gt2, mask, title=img, use_estimation=True)
-
+    # cor = process_and_viusalize_colored_mask(image, mask)
 
 if __name__ == '__main__':
     try:
@@ -172,9 +185,10 @@ if __name__ == '__main__':
     except OSError:
         gt1 = None
         gt2 = None
-    # image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
+    # base = 'D:/fax/diplomski/Datasets/test_images_two_ill'
+    # image_path = f'{base}/images'
     # image_path = '../MultiIlluminant-Utils/data/dataset_crf/realworld/srgb8bit'
-    image_path = '../MultiIlluminant-Utils/data/dataset_relighted/valid/images'
+    image_path = '../MultiIlluminant-Utils/data/test/whatsapp/images'
     mask_path = './data/custom_mask'
     image_names = os.listdir(image_path)
     images = range(1, len(image_names) + 1)
@@ -183,10 +197,7 @@ if __name__ == '__main__':
 
     num_proc = 1
 
-    if num_proc < 2:
-        for data in images:
-            main_process2(data)
-    else:
-        with mp.Pool(8) as pool:
-            pool.map(main_process, images)
+    with mp.Pool(num_proc) as pool:
+        distances = pool.map(main_process, images)
+        # np.savetxt(base+ '/distances.txt', distances)
     exit(0)

@@ -45,7 +45,8 @@ def angular_distance(a, b):
     b = b / (b[0] + b[1] + b[2])
     return np.arccos(np.dot(a, b) / np.linalg.norm(a) / np.linalg.norm(b)) * 180 / np.pi
 
-def random_colors(offset=True, desaturate=True):
+
+def random_colors(offset=True, desaturate=True, planckian=True):
     lam = np.arange(380., 781., 5)
     illuminant_D65 = xyz_from_xy(0.3127, 0.3291)
     cs_hdtv = ColourSystem(red=xyz_from_xy(0.67, 0.33),
@@ -56,27 +57,30 @@ def random_colors(offset=True, desaturate=True):
 
     def desaturate_color(c):
         c = cv2.cvtColor(np.array([[c * 255]], dtype=np.uint8), cv2.COLOR_RGB2HSV)
-        rand = np.clip(np.random.normal(0.2, 0.1, 1), 0.2, 0.8)
+        rand = np.clip(np.random.normal(0.2, 0.1, 1), 0.6, 1.0)
         c[:, :, 1] = c[:, :, 1] * rand
         c = cv2.cvtColor(c, cv2.COLOR_HSV2RGB)
         return c.squeeze().squeeze() / 255
 
     while True:
-        T = np.random.uniform(1000, 11000, 1)
-        dT = np.random.uniform(2000, 5000, 1)
-        T = (T[0], (T[0] + dT[0]) % 11000 + 1000)
-        spec1, spec2 = planck(lam, T[0]), planck(lam, T[1])
+        if planckian:
+            T = np.random.uniform(1000, 11000, 1)
+            dT = np.random.uniform(2000, 5000, 1)
+            T = (T[0], (T[0] + dT[0]) % 11000 + 1000)
+            spec1, spec2 = planck(lam, T[0]), planck(lam, T[1])
 
-        attempts += 1
-        random_offset = np.array([0, 0, 0]) if not offset else np.random.normal([0, 0, 0], [0.1, 0.1, 0.1])
-        c1, c2 = cs_hdtv.spec_to_xyz(spec1), cs_hdtv.spec_to_xyz(spec2)
-        c1, c2 = c1 + random_offset, c2 + random_offset
-        c1, c2 = cs_hdtv.xyz_to_rgb(c1), cs_hdtv.xyz_to_rgb(c2)
+            attempts += 1
+            random_offset = np.array([0, 0, 0]) if not offset else np.random.normal([0, 0, 0], [0.1, 0.1, 0.1])
+            c1, c2 = cs_hdtv.spec_to_xyz(spec1), cs_hdtv.spec_to_xyz(spec2)
+            c1, c2 = c1 + random_offset, c2 + random_offset
+            c1, c2 = cs_hdtv.xyz_to_rgb(c1), cs_hdtv.xyz_to_rgb(c2)
+        else:
+            c1, c2 = np.random.uniform(0, 1, (2, 3))
         if desaturate:
             c1, c2 = desaturate_color(c1), desaturate_color(c2)
         c1, c2 = np.clip(c1, a_min=1/255, a_max=254/255), np.clip(c2, a_min=1/255, a_max=254/255)
         ang = angular_distance(c1, c2)
-        if ang > 5 or attempts > 10:
+        if ang > 6 or attempts > 100:
             return c1, c2
 
 
@@ -255,7 +259,7 @@ def white_balance(img, rgb, mask=np.ones((1, 1, 1))):
     # result[:, :, 0] = np.where(result[:, :, 0] < 50, 0, result[:, :, 0])
     result[:, :, 1] = result[:, :, 1] - ((lab[1] - 128) * (result[:, :, 0] / 255.0) * 1.1) * mask[:, :, 0]
     result[:, :, 2] = result[:, :, 2] - ((lab[2] - 128) * (result[:, :, 0] / 255.0) * 1.1) * mask[:, :, 0]
-    result = np.clip(result, 1, 254)
+    # result = np.clip(result, 1, 254)
     result = result.astype(np.uint8)
     result = cv2.cvtColor(result, cv2.COLOR_LAB2RGB)
     return result

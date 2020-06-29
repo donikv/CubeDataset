@@ -66,14 +66,14 @@ def load(index, folder_step=100, mask_cube=False, depth=8):
         return rgb
 
 
-def create_valid_set(path='./data/relighted'):
+def create_valid_set(path='./data/relighted', ratio=0.9):
     folders = ['images', 'gt', 'img_corrected_1', 'gt_mask']
     valid_path = f'{path}/valid'
     if not os.path.exists(valid_path):
         os.mkdir(valid_path)
     for folder in folders:
         image_names = os.listdir(f'{path}/{folder}/')
-        last = int(len(image_names) * 0.9)
+        last = int(len(image_names) * ratio)
         valid_images = image_names[last:len(image_names) - 1]
         valid_folder = os.path.join(valid_path, folder)
         if not os.path.exists(valid_folder):

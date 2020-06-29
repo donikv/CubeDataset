@@ -26,7 +26,7 @@ def get_ill_diffs():
     return gt_diff_filter
 
 
-def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad):
+def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desaturate, planckian, single):
     image = fu.load(img, folder_step, depth=14)
     height, width, _ = image.shape
     image = cv2.resize(image, (int(width / 5), int(height / 5)))
@@ -45,9 +45,14 @@ def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad):
         print(identation_index)
         return False, image, None, None, None, mask
 
-    ill1, ill2 = ru.random_colors()
+    ill1, ill2 = ru.random_colors(desaturate=desaturate, planckian=planckian)
+    if single:
+        if np.random.uniform(0,1,1) > 0.5:
+            ill2 = np.ones(3)
+        else:
+            ill1 = np.ones(3)
     relighted = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
-                                 c_ill=1/3)
+                                 c_ill=1/3 if desaturate else 1/5)
     p = 0#np.random.random(1)
     i1, i2 = (ill2/ill1, np.ones(3)) if p > 0.5 else (np.ones(3), ill1/ill2)
     relighted1 = iu.color_correct(image_cor, mask=mask, ill1=i1, ill2=i2,
@@ -63,14 +68,17 @@ def main_process(data):
     folder_step = 200
     draw = False
     save = True
-    use_edges = True
+    use_edges = False
     use_grad = True
-    succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges, use_grad)
+    desaturate = True
+    planckian = False
+    single=True
+    succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desaturate, planckian, single)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask, mask], title=img)
         if save:
-            name = f'{img}-9{"-grad" if use_grad else ""}{"-edg" if use_edges else ""}.png'
+            name = f'{img}-9{"-sing" if single else ""}{"-rand" if not planckian else ""}{"-sat" if not desaturate else ""}{"-grad" if use_grad else ""}{"-edg" if use_edges else ""}.png'
             cv2.imwrite(f'./data/relighted/images/{name}', cv2.cvtColor(relighted, cv2.COLOR_RGB2BGR))
             cv2.imwrite(f'./data/relighted/gt/{name}', cv2.cvtColor((colored_mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
             cv2.imwrite(f'./data/relighted/gt_mask/{name}',

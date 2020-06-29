@@ -6,13 +6,13 @@ from skimage.filters import gaussian
 from utils.plotting_utils import visualize
 
 def process_image(img: np.ndarray, depth=14, blacklevel=2048):
-    saturationLevel = img.max() #- 2
+    saturationLevel = img.max() - 2
     img = img.astype(int)
     img = np.clip(img - blacklevel, a_min=0, a_max=np.infty).astype(int)
     m = np.where(img >= saturationLevel - blacklevel, 1, 0).sum(axis=2, keepdims=True)
     max_val = np.iinfo(np.int32).max
-    m = np.where(m > 1, [0, 0, 0], [max_val, max_val, max_val])
-    result = img#cv2.bitwise_and(img, m)
+    m = np.where(m > 0, [0, 0, 0], [max_val, max_val, max_val])
+    result = cv2.bitwise_and(img, m)
 
     return (result / 2**depth * 255).astype(np.uint8)
 
@@ -163,9 +163,26 @@ def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
     ], dtype=np.uint8)
 
 
-def color_correct_single(img, u_ill, c_ill=1 / 3.):
-    u_ill = u_ill / u_ill.sum()
+def color_correct_single_16(img, u_ill, c_ill=1 / 3., relight=False):
+    if not relight:
+        u_ill = u_ill / u_ill.sum()
     # return np.clip(img / (c_ill / u_ill), 0, 255).astype(np.uint8)
+
+    img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
+    img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
+    img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
+    return np.clip(img, 0, 255*255)
+
+
+def color_correct_single(img, u_ill, c_ill=1 / 3., relight=False):
+    if not relight:
+        u_ill = u_ill / u_ill.sum()
+    # return np.clip(img / (c_ill / u_ill), 0, 255).astype(np.uint8)
+
+    img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
+    img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
+    img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
+    return np.clip(img, 0, 255).astype(np.uint8)
 
     def correct_pixel(p, ill):
         # ill = ill / [ill[0] + ill[1] + ill[2]]
@@ -198,8 +215,9 @@ def add_gradient(image, start, colors=None, alpha=None):
         alpha = alpha[0]
     tga = np.tan(alpha)
     if colors is None:
-        colors = np.linspace(0, 90, blank_mask.shape[0] + blank_mask.shape[1])
+        colors = np.linspace(0, 90, blank_mask.shape[0] + blank_mask.shape[1]) #90
         colors = np.ceil(colors).astype(np.uint8)
+        colors = np.expand_dims(colors, -1)
     color_idx = np.round(np.linspace(0, len(colors)-1, blank_mask.shape[0] + blank_mask.shape[1])).astype(int)
     for row in range(blank_mask.shape[0]):
         col = int((row*tga))
