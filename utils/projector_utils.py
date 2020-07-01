@@ -133,3 +133,21 @@ def create_gt_mask(image, image_right, image_left, gt_right, gt_left, allwhite=N
 def denoise_mask(mask):
     mask_cls = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
     return mask_cls
+
+
+def combine_two_images(image_right, image_left, thresh=0):
+    img_right_norm = (image_right).astype(np.uint8)
+    img_right_norm = cv2.cvtColor(img_right_norm, cv2.COLOR_RGB2HLS) #dodano
+    img_right_norm[:, :, 1] = np.where(img_right_norm[:, :, 1] < thresh, 0, img_right_norm[:, :, 1])
+
+    img_left_norm = (image_left).astype(np.uint8)
+    img_left_norm = cv2.cvtColor(img_left_norm, cv2.COLOR_RGB2HLS) #dodano
+    img_left_norm[:, :, 1] = np.where(img_left_norm[:, :, 1] < thresh, 0, img_left_norm[:, :, 1])
+
+    r = img_right_norm / (img_left_norm + img_right_norm)
+    r = r.clip(0, 1)
+    mn = r[:, :, 1]
+    r[:, :, 0], r[:, :, 1], r[:, :, 2] = mn, mn, mn
+    iab = np.nan_to_num(np.clip(r * image_right + (1-r) * image_left, 0, 255))
+    iab = iab.astype(np.uint8)
+    return iab #, img_right_norm, img_left_norm, r

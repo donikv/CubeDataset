@@ -261,3 +261,12 @@ def gradient_fill(contour, blank):
         cv2.fillConvexPoly(blank, cnt, (c, c, c))
         # cv2.drawContours(blank, [cnt], -1, (c, c, c), thickness=-1)
     return blank
+
+
+def blackout(gt, im):
+    im = cv2.cvtColor(im, cv2.COLOR_RGB2HLS)
+    gt = cv2.cvtColor(gt, cv2.COLOR_RGB2HLS)
+    gt[:,:,1] = np.where(im[:,:,1] == 0, 0, gt[:,:,1])
+    gt = cv2.cvtColor(gt, cv2.COLOR_HLS2RGB)
+
+    return gt

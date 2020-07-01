@@ -114,7 +114,7 @@ if __name__ == '__main__':
         if k != -1:
             exit()
         img_name = "spydercomb-" + image[:-4]
-        cu.capture_from_camera(f"{dir2}/{img_name}.cr2")
+        cu.c(f"{dir2}/{img_name}.cr2")
         cv2.destroyWindow(window)
 
         if use_tiff:

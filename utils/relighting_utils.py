@@ -221,7 +221,6 @@ def gray_edge_estimation(img, mask=np.ones((1, 1, 1))):
     X = preprocess_for_estimation(img, mask)
     X = np.ma.masked_equal(X, np.array([0, 0, 0]))
     X = np.ma.masked_less(X, np.array([50, 50, 50]))
-    # X = np.ma.masked_equal(X, np.array([255, 255, 255]))
     X = X.mean(axis=0)
 
     return np.array(X, dtype=np.uint8)
@@ -230,16 +229,6 @@ def gray_edge_estimation(img, mask=np.ones((1, 1, 1))):
 def white_patch_estimation(img, mask=np.ones((1, 1, 1))):
     X = preprocess_for_estimation(img, mask)
     X = np.ma.masked_equal(X, np.array([0, 0, 0]))
-    # X = np.ma.masked_equal(X, np.array([255, 255, 255]))
-    # mn = X.mean(axis=0)
-    # hsv = cv2.cvtColor(np.array([X]), cv2.COLOR_RGB2HLS).squeeze()
-    # hsv = np.ma.masked_greater(hsv, [255, 250, 255])
-    # hsv = hsv.filled(0)
-    # pos = hsv[:, 1].argmax(axis=0)
-    # X = cv2.cvtColor(np.array([hsv]), cv2.COLOR_HLS2RGB).squeeze()
-    # pos = hsv[:, 1].argmax(axis=0)
-    #
-    # X = X[pos]
     X = X.max(axis=0)
 
     return np.array([[X]], dtype=np.uint8).squeeze().squeeze()

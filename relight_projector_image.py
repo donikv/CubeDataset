@@ -24,13 +24,14 @@ def load_and_correct(path, idx, tiff):
         iml = load_tiff(name+'.tiff', path, directory='left')
         imr = load_tiff(name+'.tiff', path, directory='right')
 
-    x1, y1 = np.loadtxt(path+'/pos.txt').astype(int)[idx]
-    gt = iml[y1-10:y1+10, x1-10:x1+10].mean(axis=1).mean(axis=0)
-    # gt = np.array([19,159,11])
-    gt = np.clip(gt, 0, 255 * 255) / 255 / 255
+    x1, y1, x2, y2 = np.loadtxt(path+'/pos.txt').astype(int)[idx]
+    gt1 = iml[y1-10:y1+10, x1-10:x1+10].mean(axis=1).mean(axis=0)
+    gt1 = np.clip(gt1, 0, 255 * 255) / 255 / 255
+    gt2 = iml[y2-10:y2+10, x2-10:x2+10].mean(axis=1).mean(axis=0)
+    gt2 = np.clip(gt2, 0, 255 * 255) / 255 / 255
 
-    iml = iu.color_correct_single_16(np.clip(iml, 0, 255*255), gt, 2)
-    imr = iu.color_correct_single_16(np.clip(imr, 0, 255*255), gt, 2)
+    iml = iu.color_correct_single_16(np.clip(iml, 0, 255*255), gt1, 1)
+    imr = iu.color_correct_single_16(np.clip(imr, 0, 255*255), gt2, 1)
 
     iml = iu.process_image(iml, depth=16)
     imr = iu.process_image(imr, depth=16)
@@ -52,7 +53,7 @@ def combine(imlc, imrc, colors):
     imlc = iu.color_correct_single(imlc, 1/colors[0], 1, relight=True)
     imrc = iu.color_correct_single(imrc, 1/colors[1], 1, relight=True)
 
-    imc = imlc + imrc
+    imc = pu.combine_two_images(imrc, imlc)
     return imc, imlc, imrc
 
 
@@ -64,13 +65,17 @@ def load_tiff(img, path, directory):
 
 if __name__ == '__main__':
     path = 'G:/fax/diplomski/Datasets/projector_relighted'
-    idx = 1
+    idx = 8
     iml, imr = load_and_correct(path, idx, tiff=True)
     c = ru.random_colors(desaturate=False)
     im, imlc, imrc = combine(iml, imr, c)
     gt = pu.create_gt_mask(im, imr, iml, c[1], c[0])[0]
+    gt = iu.blackout(gt, im)
+
     plt.visualize([iml, imr, imlc, imrc, im, gt])
 
+    im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+    gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
     cv2.imwrite(path + f'/images/{idx + 1}.png', im)
     cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
 
