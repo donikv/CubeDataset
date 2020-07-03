@@ -11,7 +11,8 @@ def load_cr2(name, path = 'D:\\fax\\Dataset\\ambient', directory='PNG_1_200', ma
 
     img = rawpy.imread(image_path)
     rgbg = img.raw_image_visible
-    rgb = img.postprocess(gamma=(1,1), no_auto_bright=True, output_bps=16, use_camera_wb=False, use_auto_wb=False)
+    rgb = cv2.cvtColor(rgbg, cv2.COLOR_BAYER_BG2RGB)
+    # rgb = img.postprocess(gamma=(1,0), no_auto_bright=True, output_bps=16, use_camera_wb=False, use_auto_wb=False)
 
     return rgb
 

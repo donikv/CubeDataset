@@ -24,23 +24,23 @@ def load_and_correct(path, idx, tiff):
         iml = load_tiff(name+'.tiff', path, directory='left')
         imr = load_tiff(name+'.tiff', path, directory='right')
 
+    iml = iu.process_image(iml, depth=14, blacklevel=0, scale=False)
+    imr = iu.process_image(imr, depth=14, blacklevel=0, scale=False)
+
     x1, y1, x2, y2 = np.loadtxt(path+'/pos.txt').astype(int)[idx]
     gt1 = iml[y1-10:y1+10, x1-10:x1+10].mean(axis=1).mean(axis=0)
-    gt1 = np.clip(gt1, 0, 255 * 255) / 255 / 255
+    gt1 = np.clip(gt1, 0, 255 * 255) / 255
     gt2 = iml[y2-10:y2+10, x2-10:x2+10].mean(axis=1).mean(axis=0)
-    gt2 = np.clip(gt2, 0, 255 * 255) / 255 / 255
+    gt2 = np.clip(gt2, 0, 255 * 255) / 255
 
-    iml = iu.color_correct_single_16(np.clip(iml, 0, 255*255), gt1, 1)
-    imr = iu.color_correct_single_16(np.clip(imr, 0, 255*255), gt2, 1)
-
-    iml = iu.process_image(iml, depth=16)
-    imr = iu.process_image(imr, depth=16)
+    iml = iu.color_correct_single(np.clip(iml, 0, 255*255), gt1, 1/1.713)
+    imr = iu.color_correct_single(np.clip(imr, 0, 255*255), gt2, 1/1.713)
 
     return iml, imr
 
 
 def combine(imlc, imrc, colors):
-    def blackout_shadows(im, t=2):
+    def blackout_shadows(im, t=15):
         im = cv2.cvtColor(im, cv2.COLOR_RGB2HLS)
         im[:,:,1] = np.where(im[:,:,1] < t , 0, im[:,:,1])
         im = cv2.cvtColor(im, cv2.COLOR_HLS2RGB)
@@ -65,7 +65,7 @@ def load_tiff(img, path, directory):
 
 if __name__ == '__main__':
     path = 'G:/fax/diplomski/Datasets/projector_relighted'
-    idx = 8
+    idx = 5
     iml, imr = load_and_correct(path, idx, tiff=True)
     c = ru.random_colors(desaturate=False)
     im, imlc, imrc = combine(iml, imr, c)

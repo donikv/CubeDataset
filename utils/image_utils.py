@@ -5,7 +5,7 @@ from skimage.filters import gaussian
 
 from utils.plotting_utils import visualize
 
-def process_image(img: np.ndarray, depth=14, blacklevel=2048):
+def process_image(img: np.ndarray, depth=14, blacklevel=2048, scale=False):
     saturationLevel = img.max() - 2
     img = img.astype(int)
     img = np.clip(img - blacklevel, a_min=0, a_max=np.infty).astype(int)
@@ -13,8 +13,10 @@ def process_image(img: np.ndarray, depth=14, blacklevel=2048):
     max_val = np.iinfo(np.int32).max
     m = np.where(m > 0, [0, 0, 0], [max_val, max_val, max_val])
     result = cv2.bitwise_and(img, m)
-
-    return (result / 2**depth * 255).astype(np.uint8)
+    if scale:
+        return (result / 2 ** depth).astype(np.float32)
+    else:
+        return (result / 2**depth * 255).astype(np.uint8)
 
 
 def adjust_gamma(image, gamma=1.0):
@@ -171,7 +173,19 @@ def color_correct_single_16(img, u_ill, c_ill=1 / 3., relight=False):
     img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
     img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
     img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
-    return np.clip(img, 0, 255*255)
+    return np.where(img.max(axis=2, keepdims=True) > 65535, np.ones(img.shape) * 65535, img).astype(np.uint16)
+
+
+def color_correct_single_f32(img, u_ill, c_ill=1 / 3., relight=False):
+    if not relight:
+        u_ill = u_ill / u_ill.sum()
+    # return np.clip(img / (c_ill / u_ill), 0, 255).astype(np.uint8)
+
+    img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
+    img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
+    img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
+    return np.where(img.max(axis=2, keepdims=True) > 1, np.ones(img.shape), img).astype(np.float32)
+
 
 
 def color_correct_single(img, u_ill, c_ill=1 / 3., relight=False):
@@ -182,7 +196,7 @@ def color_correct_single(img, u_ill, c_ill=1 / 3., relight=False):
     img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
     img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
     img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
-    return np.clip(img, 0, 255).astype(np.uint8)
+    return np.where(img.max(axis=2, keepdims=True) > 255, np.ones(img.shape) * 255, img).astype(np.uint8)
 
     def correct_pixel(p, ill):
         # ill = ill / [ill[0] + ill[1] + ill[2]]
