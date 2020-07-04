@@ -22,6 +22,22 @@ def debayer(rggb):
     return img
 
 
+def combine(im1, im2, gt1, gt2, gto=None, offset=0):
+    a = np.random.uniform(-1.5, 1.5, 1)
+    b = np.random.uniform(0, 2 * im1.shape[1] / 3, 1) + offset
+
+    imi = np.indices(im1.shape[:-1])
+    imc, imr = imi[0], imi[1]
+
+    mask = np.expand_dims(a * imc - imr + b > 0, axis=2)
+    imc = np.where(mask, im1, im2)
+    if gto is None:
+        gt = (np.where(mask, gt1, gt2) * 255).astype(np.uint8)
+    else:
+        gt = (np.where(mask, gto, gt2 * 255)).astype(np.uint8)
+
+    return imc, gt
+
 def load_and_get_gt(path, idx, tiff):
     name = str(idx+1)
     if not tiff:
@@ -45,11 +61,11 @@ def load_and_get_gt(path, idx, tiff):
 
 def correct(path, idx, gts=None):
     name = str(idx+1)
-    image = fu.load_png(name+'.png', path, 'images', mask_cube=False)
+    image = fu.load_png(name+'.png', path, 'images', mask_cube=False) / 2**16
     if gts is None:
         gts = np.loadtxt(path + '/gt.txt')[idx].reshape(2,3)
 
-    ci = iu.color_correct_single_16(image, gts[0], c_ill=1/3)
+    ci = iu.color_correct_single_f32(image, gts[1] + gts[0], c_ill=1/3)
     return ci
 
 
@@ -63,24 +79,42 @@ if __name__ == '__main__':
     path = '../Datasets/collage'
     idx = 0
 
-    # gts = np.loadtxt(path + '/gt.txt').reshape(-1, 2, 3)
-    # for i, j in combinations(range(0,4), 2):
-    #     gt1 = gts[i][0]
-    #     gt2 = gts[j][0]
-    #     print(f'ang({i}, {j}) = {ru.angular_distance(gt1, gt2)}')
+    gts = np.loadtxt(path + '/gt.txt').reshape(-1, 2, 3)
+    for i, j, k in combinations(range(0,4), 3):
+        name1 = str(i + 1)
+        im1 = load_tiff(name1 + '.tiff', path, directory='')
+        name2 = str(j + 1)
+        im2 = load_tiff(name2 + '.tiff', path, directory='')
+        name3 = str(k + 1)
+        im3 = load_tiff(name3 + '.tiff', path, directory='')
+        gt1 = gts[i][0]
+        gt2 = gts[j][0]
+        gt3 = gts[k][0]
 
-    for idx in range(0,6):
-        im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
-        gt1 = gt1 / gt1.sum()
-        gt2 = gt2 / gt2.sum()
+        imc, gt = combine(im1, im2, gt1, gt2)
+        imc, gt = combine(imc, im3, gt1, gt3, gt, offset=100)
 
-        im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path + f'/images/{idx + 1}.png', (im * 65535).astype(np.uint16))
-
-        f = open(path+'/gt.txt', 'a+')
-        f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
-        f.close()
-
-        # ic = correct(path, idx)
-        # ic = cv2.cvtColor(ic, cv2.COLOR_RGB2BGR)
-        # cv2.imwrite(path + f'/corrected/{idx + 1}.png', ic)
+        imc = cv2.cvtColor(imc, cv2.COLOR_RGB2BGR)
+        gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
+        if not os.path.exists(path + f'/combined_gt/{name1}-{name2}-{name3}.png'):
+            cv2.imwrite(path + f'/combined/{name1}-{name2}-{name3}.png', imc)
+            cv2.imwrite(path + f'/combined_gt/{name1}-{name2}-{name3}.png', gt)
+        # gt1 = gts[i][0]
+        # gt2 = gts[j][0]
+        # print(f'ang({i}, {j}) = {ru.angular_distance(gt1, gt2)}')
+    exit(0)
+    # for idx in range(0,1):
+    #     im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
+    #     gt1 = gt1 / gt1.sum()
+    #     gt2 = gt2 / gt2.sum()
+    #
+    #     im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+    #     cv2.imwrite(path + f'/images/{idx + 1}.png', (im * 65535).astype(np.uint16))
+    #
+    #     f = open(path+'/gt.txt', 'a+')
+    #     f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
+    #     f.close()
+    #
+    #     ic = correct(path, idx)
+    #     ic = cv2.cvtColor(ic, cv2.COLOR_RGB2BGR)
+    #     cv2.imwrite(path + f'/corrected/{idx + 1}.png', (ic * 2**16).astype(np.uint16))
