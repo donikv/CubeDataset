@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # gt = color_mask(path, idx, None)
     # gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
     # cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
-    for idx in range(4, 5):
+    for idx in range(5, 7):
         im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
         gt1 = gt1 / gt1.sum()
         gt2 = gt2 / gt2.sum()

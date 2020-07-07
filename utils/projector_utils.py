@@ -106,14 +106,13 @@ def crop(image, rect, black_out=True):
 
 
 def create_gt_mask(image, image_right, image_left, gt_right, gt_left, allwhite=None, thresh=0):
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
+    image = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_RGB2HLS)
 
     gt_left, gt_right = gt_left / gt_left.sum(), gt_right / gt_right.sum()
     img_right_norm = (image_right * 3 / np.sqrt(3)).astype(np.uint8)
     img_right_norm = cv2.cvtColor(img_right_norm, cv2.COLOR_RGB2HLS) #dodano
-
-
     img_right_norm[:, :, 1] = np.where(img_right_norm[:, :, 1] < thresh, 0, img_right_norm[:, :, 1])
+
     img_left_norm = (image_left * 3 / np.sqrt(3)).astype(np.uint8)
     img_left_norm = cv2.cvtColor(img_left_norm, cv2.COLOR_RGB2HLS) #dodano
     img_left_norm[:, :, 1] = np.where(img_left_norm[:, :, 1] < thresh, 0, img_left_norm[:, :, 1])

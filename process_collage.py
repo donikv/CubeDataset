@@ -76,45 +76,45 @@ def load_tiff(img, path, directory):
 
 
 if __name__ == '__main__':
-    path = '../Datasets/collage'
+    path = '../Datasets/collage2'
     idx = 0
 
     gts = np.loadtxt(path + '/gt.txt').reshape(-1, 2, 3)
-    for i, j, k in combinations(range(0,4), 3):
+    for i, j in combinations(range(0,9), 2):
         name1 = str(i + 1)
         im1 = load_tiff(name1 + '.tiff', path, directory='')
         name2 = str(j + 1)
         im2 = load_tiff(name2 + '.tiff', path, directory='')
-        name3 = str(k + 1)
-        im3 = load_tiff(name3 + '.tiff', path, directory='')
+        # name3 = str(k + 1)
+        # im3 = load_tiff(name3 + '.tiff', path, directory='')
         gt1 = gts[i][0]
         gt2 = gts[j][0]
-        gt3 = gts[k][0]
+        # gt3 = gts[k][0]
 
         imc, gt = combine(im1, im2, gt1, gt2)
-        imc, gt = combine(imc, im3, gt1, gt3, gt, offset=100)
+        # imc, gt = combine(imc, im3, gt1, gt3, gt, offset=100)
 
         imc = cv2.cvtColor(imc, cv2.COLOR_RGB2BGR)
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-        if not os.path.exists(path + f'/combined_gt/{name1}-{name2}-{name3}.png'):
-            cv2.imwrite(path + f'/combined/{name1}-{name2}-{name3}.png', imc)
-            cv2.imwrite(path + f'/combined_gt/{name1}-{name2}-{name3}.png', gt)
+        if not os.path.exists(path + f'/combined_gt/{name1}-{name2}.png'):
+            cv2.imwrite(path + f'/combined/{name1}-{name2}.png', imc)
+            cv2.imwrite(path + f'/combined_gt/{name1}-{name2}.png', gt)
         # gt1 = gts[i][0]
         # gt2 = gts[j][0]
         # print(f'ang({i}, {j}) = {ru.angular_distance(gt1, gt2)}')
     exit(0)
-    # for idx in range(0,1):
-    #     im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
-    #     gt1 = gt1 / gt1.sum()
-    #     gt2 = gt2 / gt2.sum()
-    #
-    #     im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-    #     cv2.imwrite(path + f'/images/{idx + 1}.png', (im * 65535).astype(np.uint16))
-    #
-    #     f = open(path+'/gt.txt', 'a+')
-    #     f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
-    #     f.close()
-    #
-    #     ic = correct(path, idx)
-    #     ic = cv2.cvtColor(ic, cv2.COLOR_RGB2BGR)
-    #     cv2.imwrite(path + f'/corrected/{idx + 1}.png', (ic * 2**16).astype(np.uint16))
+    # for idx in range(0,9):
+        # im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
+        # gt1 = gt1 / gt1.sum()
+        # gt2 = gt2 / gt2.sum()
+        #
+        # im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+        # cv2.imwrite(path + f'/images/{idx + 1}.png', (im * 65535).astype(np.uint16))
+        #
+        # f = open(path+'/gt.txt', 'a+')
+        # f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
+        # f.close()
+
+        # ic = correct(path, idx)
+        # ic = cv2.cvtColor(ic, cv2.COLOR_RGB2BGR)
+        # cv2.imwrite(path + f'/corrected/{idx + 1}.png', (ic * 2**16).astype(np.uint16))
