@@ -27,6 +27,7 @@ def get_ill_diffs():
 
 
 def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desaturate, planckian, single):
+
     image = fu.load(img, folder_step, depth=14)
     height, width, _ = image.shape
     image = cv2.resize(image, (int(width / 5), int(height / 5)))
@@ -102,7 +103,7 @@ if __name__ == '__main__':
     for img_folder in folders:
         if not os.path.exists(img_folder):
             os.mkdir(img_folder)
-    num_threads = 8
+    num_threads = 1
     if num_threads < 2:
         for data in single_ill_gt:
             main_process(data)

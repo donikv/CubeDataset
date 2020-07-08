@@ -36,6 +36,12 @@ def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True,
     return rgb
 
 
+def load_tiff(img, path, directory):
+    image_tiff = cv2.imread(f'{path}/{directory}/{img}', cv2.IMREAD_UNCHANGED)
+    imageRaw = cv2.cvtColor(image_tiff, cv2.COLOR_BAYER_RG2BGR)
+    return imageRaw
+
+
 def load_image(name, path = './data/Cube+', directory='CR2_1_100', mask_cube=True, depth=8):
     image = f"{path}/{directory}"
     image_path = os.path.join(image, name)

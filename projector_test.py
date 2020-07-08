@@ -11,13 +11,15 @@ import multiprocessing as mp
 import time
 from skimage.filters import gaussian
 
-def saveImage(image, dir, name, convert_rgb_2_bgr=True):
+def saveImage(image, dir, name, convert_rgb_2_bgr=True, scale=True):
     if not os.path.exists(dir):
         os.mkdir(dir)
     pth = os.path.join(dir, f'{name}.png')
     if convert_rgb_2_bgr:
         r, g, b = cv2.split(image)
         image = np.dstack((b, g, r))
+    if image.max() < 2:
+        image = (image * 65535).astype(np.uint16)
     cv2.imwrite(pth, image)
 
 def correct(data):
@@ -71,11 +73,11 @@ def create_cube_txt(dir, images):
                 x1, y1 = 720, 1850
                 x2, y2 = 4785, 1737
             elif idx >= 40:  # ambient3_tiff
-                x1, y1 = 906, 1812
-                x2, y2 = 4912, 1696
+                x1, y1 = 965, 1639
+                x2, y2 = 4904, 1495
             else:
-                x1, y1 = 912, 1862  # 1379, 2336 #3241, 1955#3861, 1912#1200, 2450
-                x2, y2 = 4661, 1776  # 3803, 2481#3092, 1974#1368, 2217 #1350, 2450
+                x1, y1 = 960, 1661  # 1379, 2336 #3241, 1955#3861, 1912#1200, 2450
+                x2, y2 = 4585, 1576  # 3803, 2481#3092, 1974#1368, 2217 #1350, 2450
         elif dir.endswith('ambient3'):
             if idx >= 40: #ambient3
                 x1, y1 = 928, 1844
@@ -94,7 +96,7 @@ def find_gt(dir):
     dir_name_left = f'{dir}/left'
     dir_name_right = f'{dir}/right'
     images = os.listdir(dir_name)
-    images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
+    images = list(filter(lambda x: str(x).lower().endswith('.tiff'), images))
     # images_del = list(filter(lambda x: str(x).lower().startswith('cup-'), images))
     # images = list(filter(lambda x: not str(x).lower().startswith('cup-'), images))
 
@@ -109,14 +111,16 @@ def find_gt(dir):
 
     gts_left, gts_right = [], []
     for idx, img in enumerate(images):
-        img_idx = int(img[-5])
-        img_name_base = img[:-5]
-        image = fu.load_png(img, dir_name, '', mask_cube=False)
-        image = iu.process_image(image, depth=16, blacklevel=2048)
-        right = img_name_base + str(img_idx+idx_offsets[0]) + '.png' if dir.find('pngs') == -1 else img
-        left = img_name_base + str(img_idx+idx_offsets[1]) + '.png' if dir.find('pngs') == -1 else img
-        image_r = fu.load_png(right, dir_name_right, '', mask_cube=False)
-        image_l = fu.load_png(left, dir_name_left, '', mask_cube=False)
+        img_idx = int(img[-6])
+        img_name_base = img[:-6]
+        image = fu.load_tiff(img, dir_name, '')
+        image = iu.process_image(image, depth=14, blacklevel=2048, scale=True)
+        right = img_name_base + str(img_idx+idx_offsets[0]) + '.tiff' if dir.find('pngs') == -1 else img
+        left = img_name_base + str(img_idx+idx_offsets[1]) + '.tiff' if dir.find('pngs') == -1 else img
+        image_r = fu.load_tiff(right, dir_name_right, '')
+        image_l = fu.load_tiff(left, dir_name_left, '')
+        image_l = iu.process_image(image_l, depth=14, blacklevel=2048, scale=True)
+        image_r = iu.process_image(image_r, depth=14, blacklevel=2048, scale=True)
         gt_left, gt_right = np.zeros(3), np.zeros(3)
         n = 20
         if dir.find('ambient') >= 0:
@@ -125,20 +129,18 @@ def find_gt(dir):
             x1, y1, x2, y2 = gray_pos[idx]
         for i in range(n):
             for j in range(n):
-                gt_left = gt_left + np.clip(image_l[y1 + i, x1 + j], 1, 65536)
-                gt_right = gt_right + np.clip(image_r[y2 + i, x2 + j], 1, 65536)
-        gt_left, gt_right = gt_left / n / n / 255, gt_right / n / n / 255
+                gt_left = gt_left + np.clip(image_l[y1 + i, x1 + j], 0, 1)
+                gt_right = gt_right + np.clip(image_r[y2 + i, x2 + j], 0, 1)
+        gt_left, gt_right = gt_left / n / n, gt_right / n / n
         # image = cv2.resize(image, (0, 0), fx = 1/5, fy = 1/5)
-        image_l = iu.process_image(image_l, depth=16, blacklevel=2048)
-        image_r = iu.process_image(image_r, depth=16, blacklevel=2048)
         gts_left.append(gt_left)
         gts_right.append(gt_right)
-        saveImage(image, f'{dir}/both/images', idx+1, False)
-        saveImage(image_l, f'{dir}/left/images', idx+1, False)
-        saveImage(image_r, f'{dir}/right/images', idx+1, False)
+        saveImage(image, f'{dir}/both/images', idx+1, True)
+        saveImage(image_l, f'{dir}/left/images', idx+1, True)
+        saveImage(image_r, f'{dir}/right/images', idx+1, True)
         print(idx+1)
-    np.savetxt(f'{dir}/gt_left.txt', np.array(gts_left, dtype=np.uint8), fmt='%d')
-    np.savetxt(f'{dir}/gt_right.txt', np.array(gts_right, dtype=np.uint8), fmt='%d')
+    np.savetxt(f'{dir}/gt_left.txt', np.array(gts_left, dtype=np.float32))
+    np.savetxt(f'{dir}/gt_right.txt', np.array(gts_right, dtype=np.float32))
 
 
 
@@ -149,19 +151,19 @@ def par_create(data):
     dir_name_left = f'{dir}/left/images'
     dir_name_right = f'{dir}/right/images'
 
-    image = fu.load_png(img, dir_name, '', mask_cube=False)
-    image_left = fu.load_png(img, dir_name_left, '', mask_cube=False)
-    image_right = fu.load_png(img, dir_name_right, '', mask_cube=False)
+    image = fu.load_png(img, dir_name, '', mask_cube=False) / 255
+    image_left = fu.load_png(img, dir_name_left, '', mask_cube=False) / 255
+    image_right = fu.load_png(img, dir_name_right, '', mask_cube=False) / 255
     # image = cv2.resize(image, (0, 0), fx = 1/5, fy = 1/5)
     # image_left = cv2.resize(image_left, (0, 0), fx=1 / 5, fy=1 / 5)
     # image_right = cv2.resize(image_right, (0, 0), fx=1 / 5, fy=1 / 5)
-    gt_left = np.clip(gts_left[idx], 1, 255) / 255
+    gt_left = np.clip(gts_left[idx], 0.01, 1)
     gt_left[0], gt_left[2] = gt_left[2], gt_left[0]
-    gt_right = np.clip(gts_right[idx], 1, 255) / 255
+    gt_right = np.clip(gts_right[idx], 0.01, 1)
     gt_right[0], gt_right[2] = gt_right[2], gt_right[0]
     gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left, thresh=tresh)
-    ggt_mask = gt_mask#pu.denoise_mask(gt_mask)
-    saveImage(ggt_mask.astype(np.uint8), f'{dir}/gt_mask/', idx + 1, True)
+    ggt_mask = gt_mask / 255#pu.denoise_mask(gt_mask)
+    saveImage(ggt_mask, f'{dir}/gt_mask/', idx + 1, False)
     # gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
     # cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/gt_mask/{idx + 1}lr.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
 
@@ -209,10 +211,10 @@ def debayer():
 
 
 def combine_for_training(fax, tiff, append):
-    # path = 'G:\\fax\\diplomski\\Datasets\\third\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
-    # dirs = ['ambient', 'ambient3', 'ambient4', 'ambient5', 'processed', 'ambient6']
-    path = 'G:\\fax\\diplomski\\Datasets\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
-    dirs = ['third\\realworld', 'realworld']
+    path = 'G:\\fax\\diplomski\\Datasets\\third\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
+    dirs = ['ambient', 'ambient3', 'ambient4', 'ambient5', 'processed', 'ambient6']
+    # path = 'G:\\fax\\diplomski\\Datasets\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
+    # dirs = ['third\\realworld', 'realworld']
     if tiff:
         dirs = list(map(lambda x: x+'_tiff', dirs))
     images_path = '/both/images'
@@ -221,32 +223,49 @@ def combine_for_training(fax, tiff, append):
     if tiff:
         dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined_tiff\\' if not fax else '/media/donik/Disk/combined_tiff/'
     else:
-        dest = 'G:\\fax\\diplomski\\Datasets\\realworld_combined\\' if not fax else '/media/donik/Disk/combined/'
-        # dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined\\' if not fax else '/media/donik/Disk/combined/'
+        # dest = 'G:\\fax\\diplomski\\Datasets\\realworld_combined\\' if not fax else '/media/donik/Disk/combined/'
+        dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined\\' if not fax else '/media/donik/Disk/combined/'
 
+    gts = []
+    pos = []
     name_idx = 1
     if append and os.path.exists(dest + 'images'):
         current_images = os.listdir(dest + 'images')
         current_idxs = list(map(lambda x: int(x[:-4]), current_images))
         name_idx = max(current_idxs) + 1
     for dir in dirs:
+        print(dir)
         image_names = os.listdir(path+dir+images_path)
+        gts_left = np.loadtxt(f'{path+dir}/gt_left.txt')
+        gts_right = np.loadtxt(f'{path+dir}/gt_right.txt')
+        cube = np.loadtxt(f'{path+dir}/cube.txt')
         for name in image_names:
+            idx = int(name[:-4]) - 1
+
+            gt_left = gts_left[idx]
+            gt_right = gts_right[idx]
+            gt = np.append(gt_left, gt_right)
+            gts.append(gt)
+            cb_pos = cube[idx]
+            pos.append(cb_pos)
+
             img = fu.load_png(name, path+dir, images_path[1:], mask_cube=False)
             gt = fu.load_png(name, path+dir, gt_path[1:], mask_cube=False)
-            saveImage(img, dest+'images', str(name_idx), not(name_idx >= 123 and name_idx <= 200))
-            saveImage(gt, dest + 'gt', str(name_idx), not(name_idx >= 123 and name_idx <= 200))
+            saveImage(img, dest+'images', str(name_idx), True)
+            saveImage(gt, dest + 'gt', str(name_idx), True)
             name_idx += 1
+    np.savetxt(f'{path}/gts.txt', np.array(gts, dtype=np.float32))
+    np.savetxt(f'{path}/pos.txt', np.array(cube, dtype=int), fmt='%d')
 
 
 if __name__ == '__main__':
     fax = os.name != 'nt'
-    combine_for_training(fax, False, False)
+    combine_for_training(fax, True, False)
     exit()
     if fax:
         dir = "/media/donik/Jolteon/fax/diplomski/Datasets/third/processed_tiff"
     else:
-        dir = 'projector_test/projector2/pngs'
+        dir = "G:/fax/diplomski/Datasets/third/ambient3_tiff"
     find_gt(dir)
     tresh = 1 if dir.endswith('tiff') else 0
     create_gt_mask(dir, thresh=tresh)
