@@ -62,8 +62,8 @@ def crop(data):
 def create_cube_txt(dir, images):
     pos = []
     for idx, img in enumerate(images):
-        if dir.endswith('pngs'):
-            x1, y1, x2, y2 = 285, 1567, 4256, 1477
+        if dir.endswith('projector2'):
+            x1, y1, x2, y2 = 1019, 1902, 4256, 1477
         elif dir.endswith('ambient5') or dir.endswith('ambient5_tiff'):
             x1,y1,x2,y2 = 669, 2442, 4885, 2450
         elif dir.endswith('ambient') or dir.endswith('ambient_tiff'):
@@ -114,13 +114,13 @@ def find_gt(dir):
         img_idx = int(img[-6])
         img_name_base = img[:-6]
         image = fu.load_tiff(img, dir_name, '')
-        image = iu.process_image(image, depth=14, blacklevel=2048, scale=True)
-        right = img_name_base + str(img_idx+idx_offsets[0]) + '.tiff' if dir.find('pngs') == -1 else img
-        left = img_name_base + str(img_idx+idx_offsets[1]) + '.tiff' if dir.find('pngs') == -1 else img
+        image = iu.process_image(image, depth=14, blacklevel=0, scale=True)
+        right = img_name_base + str(img_idx+idx_offsets[0]) + '.tiff' if dir.find('projector2') == -1 else img
+        left = img_name_base + str(img_idx+idx_offsets[1]) + '.tiff' if dir.find('projector2') == -1 else img
         image_r = fu.load_tiff(right, dir_name_right, '')
         image_l = fu.load_tiff(left, dir_name_left, '')
-        image_l = iu.process_image(image_l, depth=14, blacklevel=2048, scale=True)
-        image_r = iu.process_image(image_r, depth=14, blacklevel=2048, scale=True)
+        image_l = iu.process_image(image_l, depth=14, blacklevel=0, scale=True)
+        image_r = iu.process_image(image_r, depth=14, blacklevel=0, scale=True)
         gt_left, gt_right = np.zeros(3), np.zeros(3)
         n = 20
         if dir.find('ambient') >= 0:
@@ -260,12 +260,12 @@ def combine_for_training(fax, tiff, append):
 
 if __name__ == '__main__':
     fax = os.name != 'nt'
-    combine_for_training(fax, True, False)
-    exit()
+    # combine_for_training(fax, True, False)
+    # exit()
     if fax:
         dir = "/media/donik/Jolteon/fax/diplomski/Datasets/third/processed_tiff"
     else:
-        dir = "G:/fax/diplomski/Datasets/third/ambient3_tiff"
+        dir = "projector_test/projector2"
     find_gt(dir)
     tresh = 1 if dir.endswith('tiff') else 0
     create_gt_mask(dir, thresh=tresh)

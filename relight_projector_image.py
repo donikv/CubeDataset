@@ -8,8 +8,12 @@ import utils.relighting_utils as ru
 import utils.projector_utils as pu
 import utils.plotting_utils as plt
 
+PNG = 'png'
+TIFF = 'tiff'
+NEF = 'nef'
 
-def load_and_correct(path, idx, tiff):
+
+def load_and_correct(path, idx, type):
     def make_white(im, t=10):
         im = cv2.cvtColor(im, cv2.COLOR_RGB2HLS)
         im[:,:,1] = np.where(im[:,:,1] > t , 1, 0)
@@ -17,12 +21,15 @@ def load_and_correct(path, idx, tiff):
         return im
 
     name = str(idx+1)
-    if not tiff:
-        iml = fu.load_cr2(name+'.NEF', path, directory='left', mask_cube=False)
-        imr = fu.load_cr2(name+'.NEF', path, directory='right', mask_cube=False)
-    else:
+    if type == NEF:
+        iml = fu.load_cr2(name+'.NEF', path, directory='ambient', mask_cube=False)
+        imr = fu.load_cr2(name+'.NEF', path, directory='direct', mask_cube=False)
+    elif type == TIFF:
         iml = load_tiff(name+'.tiff', path, directory='left')
         imr = load_tiff(name+'.tiff', path, directory='right')
+    else:
+        iml = fu.load_png(name+'.png', path, directory='ambient/debayered_tiff')
+        imr = fu.load_png(name+'.png', path, directory='direct/debayered_tiff')
 
     iml = iu.process_image(iml, depth=14, blacklevel=0, scale=False)
     imr = iu.process_image(imr, depth=14, blacklevel=0, scale=False)
@@ -30,7 +37,7 @@ def load_and_correct(path, idx, tiff):
     x1, y1, x2, y2 = np.loadtxt(path+'/pos.txt').astype(int)[idx]
     gt1 = iml[y1-10:y1+10, x1-10:x1+10].mean(axis=1).mean(axis=0)
     gt1 = np.clip(gt1, 0, 255 * 255) / 255
-    gt2 = iml[y2-10:y2+10, x2-10:x2+10].mean(axis=1).mean(axis=0)
+    gt2 = imr[y2-10:y2+10, x2-10:x2+10].mean(axis=1).mean(axis=0)
     gt2 = np.clip(gt2, 0, 255 * 255) / 255
 
     iml = iu.color_correct_single(np.clip(iml, 0, 255*255), gt1, 1/1.713)
@@ -64,9 +71,9 @@ def load_tiff(img, path, directory):
 
 
 if __name__ == '__main__':
-    path = 'G:/fax/diplomski/Datasets/projector_relighted'
-    idx = 5
-    iml, imr = load_and_correct(path, idx, tiff=True)
+    path = 'G:/fax/diplomski/Datasets/realworld'
+    idx = 0
+    iml, imr = load_and_correct(path, idx, type=PNG)
     c = ru.random_colors(desaturate=False)
     im, imlc, imrc = combine(iml, imr, c)
     gt = pu.create_gt_mask(im, imr, iml, c[1], c[0])[0]
@@ -76,8 +83,8 @@ if __name__ == '__main__':
 
     im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
     gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(path + f'/images/{idx + 1}.png', im)
-    cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
+    cv2.imwrite(path + f'/relighted/images/{idx + 1}.png', im)
+    cv2.imwrite(path + f'/relighted/gt/{idx + 1}.png', gt)
 
     f = open(path+'/gt.txt', 'a+')
     f.write(f'{c[0][0]} {c[0][1]} {c[0][2]} {c[1][0]} {c[1][1]} {c[1][2]}\n')
