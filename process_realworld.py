@@ -26,7 +26,7 @@ def find_gt_realworld(dir):
     dir_name = f'{dir}/both'
     dir_name_left = f'{dir}/ambient'
     dir_name_right = f'{dir}/direct'
-    images = os.listdir(dir_name+'/debayered_tiff')
+    images = os.listdir(dir_name+'/debayered')
     images = list(filter(lambda x: str(x).lower().endswith('.png'), images))
     images = sorted(images, key=lambda x: int(x[:-4]))
 
@@ -34,21 +34,21 @@ def find_gt_realworld(dir):
 
     gts_left, gts_right = [], []
     for idx, img in enumerate(images):
-        image = fu.load_png(img, dir_name, 'debayered_tiff', mask_cube=False)
-        image = iu.process_image(image, depth=14, blacklevel=0, scale=True)
-        image_r = fu.load_png(img, dir_name_right, 'debayered_tiff',
+        image = fu.load_png(img, dir_name, 'debayered', mask_cube=False)
+        image = iu.process_image(image, depth=14, blacklevel=2048, scale=True)
+        image_r = fu.load_png(img, dir_name_right, 'debayered',
                               mask_cube=False)
-        image_l = fu.load_png(img, dir_name_left, 'debayered_tiff',
+        image_l = fu.load_png(img, dir_name_left, 'debayered',
                               mask_cube=False)
         # image_rc = image_r.copy()  # fu.load_png(img, dir_name_right+'_cube', 'debayered', mask_cube = False)
         # image_lc = image_l.copy()
         # fu.load_png(img, dir_name_left+'_cube', 'debayered', mask_cube = False)
-        image_r = iu.process_image(image_r, depth=14, blacklevel=0, scale=True)
-        image_l = iu.process_image(image_l, depth=14, blacklevel=0, scale=True)
+        image_r = iu.process_image(image_r, depth=14, blacklevel=2048, scale=True)
+        image_l = iu.process_image(image_l, depth=14, blacklevel=2048, scale=True)
 
         x1, y1, x2, y2 = gray_pos[idx]
-        gt_left = np.clip(image_l[y1, x1], 0.01, 1)
-        gt_right = np.clip(image_r[y2, x2], 0.01, 1)
+        gt_left = np.clip(image_l[y1, x1], 0.001, 1)
+        gt_right = np.clip(image_r[y2, x2], 0.001, 1)
         gts_left.append(gt_left)
         gts_right.append(gt_right)
         saveImage((image * 65535).astype(np.uint16), f'{dir}/both/images', idx + 1, True)
@@ -106,7 +106,7 @@ def create_gt_mask(dir, thresh):
 
 if __name__ == '__main__':
     folds = ['both', 'ambient', 'direct']#, 'both_cube', 'ambient_cube', 'direct_cube']
-    path = 'G:/fax/diplomski/Datasets/realworld/'
+    path = 'G:/fax/diplomski/Datasets/third/realworld_tiff'
 
     # for fold in folds:
     #     images = os.listdir(path+fold)
@@ -124,6 +124,6 @@ if __name__ == '__main__':
         #     saveImage(deb_img, path+fold+'/debayered_tiff', f'{idx+1}', False)
 
 
-    find_gt_realworld(path)
+    # find_gt_realworld(path)
     create_gt_mask(path, 0)
     exit(0)
