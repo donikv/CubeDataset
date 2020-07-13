@@ -8,7 +8,8 @@ import utils.relighting_utils as ru
 import utils.projector_utils as pu
 import utils.plotting_utils as plt
 
-PNG = 'png'
+PNG_RW = 'png'
+PNG_LAB = 'png_lab'
 TIFF = 'tiff'
 NEF = 'nef'
 
@@ -27,14 +28,22 @@ def load_and_correct(path, idx, type):
     elif type == TIFF:
         iml = load_tiff(name+'.tiff', path, directory='left')
         imr = load_tiff(name+'.tiff', path, directory='right')
+    elif type == PNG_LAB:
+        iml = fu.load_png(name+'.png', path, directory='left/images', mask_cube=False)
+        imr = fu.load_png(name+'.png', path, directory='right/images', mask_cube=False)
     else:
         iml = fu.load_png(name+'.png', path, directory='ambient/debayered', mask_cube=False)
         imr = fu.load_png(name+'.png', path, directory='direct/debayered', mask_cube=False)
 
-    iml = iu.process_image(iml, depth=14, blacklevel=2048, scale=True)
-    imr = iu.process_image(imr, depth=14, blacklevel=2048, scale=True)
 
-    x1, y1, x2, y2 = np.loadtxt(path+'/pos.txt').astype(int)[idx]
+    if type == PNG_LAB:
+        iml = iml / 2 ** 16
+        imr = imr / 2 ** 16
+    else:
+        iml = iu.process_image(iml, depth=14, blacklevel=2048, scale=True)
+        imr = iu.process_image(imr, depth=14, blacklevel=2048, scale=True)
+
+    x1, y1, x2, y2 = np.loadtxt(path+'/cube.txt').astype(int)[idx]
     gt1 = iml[y1-10:y1+10, x1-10:x1+10].mean(axis=1).mean(axis=0)
     gt1 = np.clip(gt1, 0.001, 1)
     gt2 = imr[y2-10:y2+10, x2-10:x2+10].mean(axis=1).mean(axis=0)
@@ -71,21 +80,36 @@ def load_tiff(img, path, directory):
 
 
 if __name__ == '__main__':
-    path = 'G:/fax/diplomski/Datasets/third/realworld_tiff'
-    for idx in range(0,10):
-        iml, imr = load_and_correct(path, idx, type=PNG)
+    path = 'G:/fax/diplomski/Datasets/third/ambient4_tiff'
+    images = os.listdir(path + '/both/images')
+    current_relighted_images = os.listdir(path + '/relighted/images/')
+    current_relighted_idxs = list(map(lambda x: int(x[:-4]), current_relighted_images))
+    last_idx = sorted(current_relighted_idxs)[-1] if len(current_relighted_idxs) > 0 else 0
+    for img_idx, image in enumerate(images):
+        a = image.rfind(".")
+        idx = int(image[:a]) - 1
+
+        iml, imr = load_and_correct(path, idx, type=PNG_LAB)
         c = ru.random_colors(desaturate=False)
         im, imlc, imrc = combine(iml, imr, c)
-        gt = pu.create_gt_mask(im * 255, imr * 255, iml * 255, c[1], c[0])[0]
+        imc1 = pu.combine_two_images(imrc, iml)
+        gt, _, _, r = pu.create_gt_mask(im * 255, imr * 255, iml * 255, c[1], c[0])
         gt = iu.blackout(gt, im)
 
-        plt.visualize([iml, imr, imlc, imrc, im, gt])
+        plt.visualize([iml, imr, imlc, imrc, im, gt, imc1, np.round(1 - r)])
 
         im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+        imc1 = cv2.cvtColor(imc1, cv2.COLOR_RGB2BGR)
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
         im = (im * 2**16).astype(np.uint16)
-        cv2.imwrite(path + f'/relighted/images/{idx + 1}.png', im)
-        cv2.imwrite(path + f'/relighted/gt/{idx + 1}.png', gt)
+        imc1 = (imc1 * 2 ** 16).astype(np.uint16)
+        r = 255 - (r * 255).astype(np.uint8)
+
+        img_idx = img_idx + last_idx
+        cv2.imwrite(path + f'/relighted/images/{img_idx + 1}.png', im)
+        cv2.imwrite(path + f'/relighted/gt/{img_idx + 1}.png', gt)
+        cv2.imwrite(path + f'/relighted/gt_mask/{img_idx + 1}.png', r)
+        cv2.imwrite(path + f'/relighted/img_corrected_1/{img_idx + 1}.png', imc1)
 
         f = open(path+'/gt.txt', 'a+')
         f.write(f'{c[0][0]} {c[0][1]} {c[0][2]} {c[1][0]} {c[1][1]} {c[1][2]}\n')

@@ -45,21 +45,21 @@ def load_tiff(img, path, directory):
 if __name__ == '__main__':
     path = '../Datasets/outdoor/test_two_ill'
     idx = 3
-
-    # gt = color_mask(path, idx, None)
-    # gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-    # cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
-    for idx in range(5, 7):
-        im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
-        gt1 = gt1 / gt1.sum()
-        gt2 = gt2 / gt2.sum()
-
-        im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-        gt = color_mask(path, idx, (gt1, gt2))
+    for idx in range(8, 16):
+        gt = color_mask(path, idx, None)
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path + f'/images/{idx + 1}.png', (im * 65535).astype(np.uint16))
         cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
-
-        f = open(path+'/gt.txt', 'a+')
-        f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
-        f.close()
+    # for idx in range(7, 16):
+    #     im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
+    #     gt1 = gt1 / gt1.sum()
+    #     gt2 = gt2 / gt2.sum()
+    #
+    #     im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+    #     # gt = color_mask(path, idx, (gt1, gt2))
+    #     # gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
+    #     cv2.imwrite(path + f'/images/{idx + 1}.png', (im * 65535).astype(np.uint16))
+    #     # cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
+    #
+    #     f = open(path+'/gt.txt', 'a+')
+    #     f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
+    #     f.close()

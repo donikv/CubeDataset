@@ -212,16 +212,18 @@ def debayer():
 
 def combine_for_training(fax, tiff, append):
     path = 'G:\\fax\\diplomski\\Datasets\\third\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
-    dirs = ['ambient', 'ambient3', 'ambient4', 'ambient5', 'processed', 'ambient6']
+    dirs = ['ambient', 'ambient3', 'ambient4', 'processed']
     # path = 'G:\\fax\\diplomski\\Datasets\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
     # dirs = ['third\\realworld', 'realworld']
     if tiff:
         dirs = list(map(lambda x: x+'_tiff', dirs))
-    images_path = '/both/images'
-    gt_path = '/gt_mask'
+    images_path = '/relighted/images'
+    gt_path = '/relighted/gt'
+    img1_path = '/relighted/img_corrected_1'
+    gt_mask_path = '/relighted/gt_mask'
 
     if tiff:
-        dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined_tiff\\' if not fax else '/media/donik/Disk/combined_tiff/'
+        dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined_tiff_relighted\\' if not fax else '/media/donik/Disk/combined_tiff/'
     else:
         # dest = 'G:\\fax\\diplomski\\Datasets\\realworld_combined\\' if not fax else '/media/donik/Disk/combined/'
         dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined\\' if not fax else '/media/donik/Disk/combined/'
@@ -236,38 +238,39 @@ def combine_for_training(fax, tiff, append):
     for dir in dirs:
         print(dir)
         image_names = os.listdir(path+dir+images_path)
-        gts_left = np.loadtxt(f'{path+dir}/gt_left.txt')
-        gts_right = np.loadtxt(f'{path+dir}/gt_right.txt')
+        gts_old = np.loadtxt(f'{path+dir}/gt.txt')
         cube = np.loadtxt(f'{path+dir}/cube.txt')
         for name in image_names:
             idx = int(name[:-4]) - 1
 
-            gt_left = gts_left[idx]
-            gt_right = gts_right[idx]
-            gt = np.append(gt_left, gt_right)
+            gt = gts_old[idx]
             gts.append(gt)
             cb_pos = cube[idx]
             pos.append(cb_pos)
 
             img = fu.load_png(name, path+dir, images_path[1:], mask_cube=False)
             gt = fu.load_png(name, path+dir, gt_path[1:], mask_cube=False)
+            img1 = fu.load_png(name, path+dir, img1_path[1:], mask_cube=False)
+            gt_mask = fu.load_png(name, path+dir, gt_mask_path[1:], mask_cube=False)
             saveImage(img, dest+'images', str(name_idx), True)
             saveImage(gt, dest + 'gt', str(name_idx), True)
+            saveImage(img1, dest+'img_corrected_1', str(name_idx), True)
+            saveImage(gt_mask, dest + 'gt_mask', str(name_idx), True)
             name_idx += 1
-    np.savetxt(f'{path}/gts.txt', np.array(gts, dtype=np.float32))
-    np.savetxt(f'{path}/pos.txt', np.array(cube, dtype=int), fmt='%d')
+    np.savetxt(f'{dest}/gts.txt', np.array(gts, dtype=np.float32))
+    np.savetxt(f'{dest}/pos.txt', np.array(cube, dtype=int), fmt='%d')
 
 
 if __name__ == '__main__':
     fax = os.name != 'nt'
-    # combine_for_training(fax, True, False)
-    # exit()
-    if fax:
-        dir = "/media/donik/Jolteon/fax/diplomski/Datasets/third/processed_tiff"
-    else:
-        dir = "projector_test/projector2"
-    find_gt(dir)
-    tresh = 1 if dir.endswith('tiff') else 0
-    create_gt_mask(dir, thresh=tresh)
+    combine_for_training(fax, True, False)
+    exit()
+    # if fax:
+    #     dir = "/media/donik/Jolteon/fax/diplomski/Datasets/third/processed_tiff"
+    # else:
+    #     dir = "projector_test/projector2"
+    # find_gt(dir)
+    # tresh = 1 if dir.endswith('tiff') else 0
+    # create_gt_mask(dir, thresh=tresh)
 
 
