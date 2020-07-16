@@ -40,8 +40,8 @@ def load_and_correct(path, idx, type):
         iml = iml / 2 ** 16
         imr = imr / 2 ** 16
     else:
-        iml = iu.process_image(iml, depth=14, blacklevel=2048, scale=True)
-        imr = iu.process_image(imr, depth=14, blacklevel=2048, scale=True)
+        iml = iu.process_image(iml, depth=14, blacklevel=0, scale=True)
+        imr = iu.process_image(imr, depth=14, blacklevel=0, scale=True)
 
     x1, y1, x2, y2 = np.loadtxt(path+'/cube.txt').astype(int)[idx]
     gt1 = iml[y1-10:y1+10, x1-10:x1+10].mean(axis=1).mean(axis=0)
@@ -80,7 +80,7 @@ def load_tiff(img, path, directory):
 
 
 if __name__ == '__main__':
-    path = 'G:/fax/diplomski/Datasets/third/ambient4_tiff'
+    path = '../CubeDataset/projector_test/projector2/'
     images = os.listdir(path + '/both/images')
     current_relighted_images = os.listdir(path + '/relighted/images/')
     current_relighted_idxs = list(map(lambda x: int(x[:-4]), current_relighted_images))
@@ -89,21 +89,21 @@ if __name__ == '__main__':
         a = image.rfind(".")
         idx = int(image[:a]) - 1
 
-        iml, imr = load_and_correct(path, idx, type=PNG_LAB)
+        iml, imr = load_and_correct(path, idx, type=TIFF)
         c = ru.random_colors(desaturate=False)
         im, imlc, imrc = combine(iml, imr, c)
-        imc1 = pu.combine_two_images(imrc, iml)
+        imc1 = pu.combine_two_images(imr, imlc)
         gt, _, _, r = pu.create_gt_mask(im * 255, imr * 255, iml * 255, c[1], c[0])
         gt = iu.blackout(gt, im)
 
-        plt.visualize([iml, imr, imlc, imrc, im, gt, imc1, np.round(1 - r)])
+        plt.visualize([iml, imr, imlc, imrc, im, gt, imc1, np.round(r)])
 
         im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
         imc1 = cv2.cvtColor(imc1, cv2.COLOR_RGB2BGR)
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
         im = (im * 2**16).astype(np.uint16)
         imc1 = (imc1 * 2 ** 16).astype(np.uint16)
-        r = 255 - (r * 255).astype(np.uint8)
+        r = (r * 255).astype(np.uint8)
 
         img_idx = img_idx + last_idx
         cv2.imwrite(path + f'/relighted/images/{img_idx + 1}.png', im)

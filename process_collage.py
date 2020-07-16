@@ -22,9 +22,7 @@ def debayer(rggb):
     return img
 
 
-def combine(im1, im2, gt1, gt2, gto=None, offset=0):
-    a = np.random.uniform(-1.5, 1.5, 1)
-    b = np.random.uniform(0, 2 * im1.shape[1] / 3, 1) + offset
+def combine(im1, im2, gt1, gt2, a, b, gto=None):
 
     imi = np.indices(im1.shape[:-1])
     imc, imr = imi[0], imi[1]
@@ -76,34 +74,43 @@ def load_tiff(img, path, directory):
 
 
 if __name__ == '__main__':
-    path = '../Datasets/collage2'
+    path = '../Datasets/collage3'
     idx = 0
 
     gts = np.loadtxt(path + '/gt.txt').reshape(-1, 2, 3)
-    for i, j in combinations(range(0,9), 2):
+    for i, j in combinations(range(0,6), 2):
         name1 = str(i + 1)
-        im1 = load_tiff(name1 + '.tiff', path, directory='')
+        im1 = fu.load_png(name1 + '.png', path, directory='images', mask_cube=False)
         name2 = str(j + 1)
-        im2 = load_tiff(name2 + '.tiff', path, directory='')
+        im2 = fu.load_png(name2 + '.png', path, directory='images', mask_cube=False)
+        im2c = fu.load_png(name2 + '.png', path, directory='corrected', mask_cube=False)
         # name3 = str(k + 1)
         # im3 = load_tiff(name3 + '.tiff', path, directory='')
         gt1 = gts[i][0]
         gt2 = gts[j][0]
         # gt3 = gts[k][0]
 
-        imc, gt = combine(im1, im2, gt1, gt2)
+        a = np.random.uniform(-1.5, 1.5, 1)
+        b = np.random.uniform(0, 2 * im1.shape[1] / 3, 1)
+
+        imc, gt = combine(im1, im2, gt1, gt2, a, b)
+        imcc, gtc = combine(im1, im2c, gt1, np.ones(3), a, b)
+        gt_mask = np.where(gtc != np.ones(3)*255, np.zeros(3), gtc)
         # imc, gt = combine(imc, im3, gt1, gt3, gt, offset=100)
 
         imc = cv2.cvtColor(imc, cv2.COLOR_RGB2BGR)
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-        if not os.path.exists(path + f'/combined_gt/{name1}-{name2}.png'):
-            cv2.imwrite(path + f'/combined/{name1}-{name2}.png', imc)
-            cv2.imwrite(path + f'/combined_gt/{name1}-{name2}.png', gt)
+        imcc = cv2.cvtColor(imcc, cv2.COLOR_RGB2BGR)
+        if not os.path.exists(path + f'/relighted/gt/{name1}-{name2}.png'):
+            cv2.imwrite(path + f'/relighted/images/{name1}-{name2}.png', imc)
+            cv2.imwrite(path + f'/relighted/gt/{name1}-{name2}.png', gt)
+            cv2.imwrite(path + f'/relighted/img_corrected_1/{name1}-{name2}.png', imcc)
+            cv2.imwrite(path + f'/relighted/gt_mask/{name1}-{name2}.png', gt_mask)
         # gt1 = gts[i][0]
         # gt2 = gts[j][0]
         # print(f'ang({i}, {j}) = {ru.angular_distance(gt1, gt2)}')
-    exit(0)
-    # for idx in range(0,9):
+    # exit(0)
+    for idx in range(0,6):
         # im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
         # gt1 = gt1 / gt1.sum()
         # gt2 = gt2 / gt2.sum()
@@ -115,6 +122,6 @@ if __name__ == '__main__':
         # f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
         # f.close()
 
-        # ic = correct(path, idx)
-        # ic = cv2.cvtColor(ic, cv2.COLOR_RGB2BGR)
-        # cv2.imwrite(path + f'/corrected/{idx + 1}.png', (ic * 2**16).astype(np.uint16))
+        ic = correct(path, idx)
+        ic = cv2.cvtColor(ic, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(path + f'/corrected/{idx + 1}.png', (ic * 2**16).astype(np.uint16))

@@ -74,14 +74,25 @@ def par_create(data):
     dir_name_left = f'{dir}/ambient/images'
     dir_name_right = f'{dir}/direct/images'
 
-    image = fu.load_png(img, dir_name, '', mask_cube=False) / 255
+    image = fu.load_png(img, dir_name, '', mask_cube=False)
     image_left = fu.load_png(img, dir_name_left, '', mask_cube=False) / 255
     image_right = fu.load_png(img, dir_name_right, '', mask_cube=False) / 255
     gt_left = np.clip(gts_left[idx], 0, 1)
     gt_right = np.clip(gts_right[idx], 0, 1)
-    gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left, thresh=tresh)
+    gt_mask, ir, il, r = pu.create_gt_mask(image / 255, image_right, image_left, gt_right, gt_left, thresh=tresh)
     ggt_mask = gt_mask
-    saveImage(ggt_mask.astype(np.uint8), f'{dir}/gt_mask/', idx + 1, True)
+    r = r * 255
+    imcl = iu.color_correct_single_16(image, u_ill=gt_left, c_ill=1 / 1.713)
+    imcr = iu.color_correct_single_16(image, u_ill=gt_right, c_ill=1 / 1.713)
+
+    saveImage(ggt_mask.astype(np.uint8), f'{dir}/gt/', idx + 1, True)
+
+    saveImage(imcl.astype(np.uint16), f'{dir}/img_corrected_1/', f"{idx + 1}l", True)
+    saveImage(r.astype(np.uint8), f'{dir}/gt_mask/', f"{idx + 1}l", True)
+
+    saveImage(imcr.astype(np.uint16), f'{dir}/img_corrected_1/', f"{idx + 1}r", True)
+    saveImage((255 - r).astype(np.uint8), f'{dir}/gt_mask/', f"{idx + 1}r", True)
+
 
 
 def create_gt_mask(dir, thresh):
@@ -92,7 +103,7 @@ def create_gt_mask(dir, thresh):
     gts_right = np.loadtxt(f'{dir}/gt_direct.txt')
     data = list(map(lambda x: (int(x[:-4])-1, x, gts_left, gts_right, dir, thresh), images))
 
-    num_proc = 1
+    num_proc = 8
 
     if num_proc > 1:
         with mp.Pool(num_proc) as p:
@@ -106,7 +117,7 @@ def create_gt_mask(dir, thresh):
 
 if __name__ == '__main__':
     folds = ['both', 'ambient', 'direct']#, 'both_cube', 'ambient_cube', 'direct_cube']
-    path = 'G:/fax/diplomski/Datasets/third/realworld_tiff'
+    path = 'G:/fax/diplomski/Datasets/realworld'
 
     # for fold in folds:
     #     images = os.listdir(path+fold)

@@ -212,7 +212,7 @@ def debayer():
 
 def combine_for_training(fax, tiff, append):
     path = 'G:\\fax\\diplomski\\Datasets\\third\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
-    dirs = ['ambient', 'ambient3', 'ambient4', 'processed']
+    dirs = ['ambient', 'ambient3', 'ambient4', 'processed', 'realworld', 'ambient6']
     # path = 'G:\\fax\\diplomski\\Datasets\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
     # dirs = ['third\\realworld', 'realworld']
     if tiff:
@@ -230,7 +230,10 @@ def combine_for_training(fax, tiff, append):
 
     gts = []
     pos = []
-    name_idx = 1
+    current_relighted_images = os.listdir(dest+'images/')
+    current_relighted_idxs = list(map(lambda x: int(x[:-4]), current_relighted_images))
+    name_idx = sorted(current_relighted_idxs)[-1] if len(current_relighted_idxs) > 0 else 0
+    name_idx = name_idx + 1
     if append and os.path.exists(dest + 'images'):
         current_images = os.listdir(dest + 'images')
         current_idxs = list(map(lambda x: int(x[:-4]), current_images))
@@ -245,17 +248,23 @@ def combine_for_training(fax, tiff, append):
 
             gt = gts_old[idx]
             gts.append(gt)
-            cb_pos = cube[idx]
-            pos.append(cb_pos)
+            # cb_pos = cube[idx]
+            # pos.append(cb_pos)
 
-            img = fu.load_png(name, path+dir, images_path[1:], mask_cube=False)
-            gt = fu.load_png(name, path+dir, gt_path[1:], mask_cube=False)
-            img1 = fu.load_png(name, path+dir, img1_path[1:], mask_cube=False)
-            gt_mask = fu.load_png(name, path+dir, gt_mask_path[1:], mask_cube=False)
-            saveImage(img, dest+'images', str(name_idx), True)
-            saveImage(gt, dest + 'gt', str(name_idx), True)
-            saveImage(img1, dest+'img_corrected_1', str(name_idx), True)
-            saveImage(gt_mask, dest + 'gt_mask', str(name_idx), True)
+            # img = fu.load_png(name, path+dir, images_path[1:], mask_cube=False)
+            # gt = fu.load_png(name, path+dir, gt_path[1:], mask_cube=False)
+            # img1 = fu.load_png(name, path+dir, img1_path[1:], mask_cube=False)
+            # gt_mask = fu.load_png(name, path+dir, gt_mask_path[1:], mask_cube=False)
+            # saveImage(img, dest+'images', str(name_idx), True)
+            # saveImage(gt, dest + 'gt', str(name_idx), True)
+            # saveImage(img1, dest+'img_corrected_1', str(name_idx), True)
+            # saveImage(gt_mask, dest + 'gt_mask', str(name_idx), True)
+
+            os.rename(path+dir+images_path+"/"+name, dest+'images/'+str(name_idx) + '.png')
+            os.rename(path + dir + gt_path + "/" + name, dest + 'gt/' + str(name_idx) + '.png')
+            os.rename(path + dir + img1_path + "/" + name, dest + 'img_corrected_1/' + str(name_idx) + '.png')
+            os.rename(path + dir + gt_mask_path + "/" + name, dest + 'gt_mask/' + str(name_idx) + '.png')
+
             name_idx += 1
     np.savetxt(f'{dest}/gts.txt', np.array(gts, dtype=np.float32))
     np.savetxt(f'{dest}/pos.txt', np.array(cube, dtype=int), fmt='%d')
