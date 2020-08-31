@@ -36,9 +36,9 @@ def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True,
     return rgb
 
 
-def load_tiff(img, path, directory):
+def load_tiff(img, path, directory, bayer=cv2.COLOR_BAYER_RG2BGR):
     image_tiff = cv2.imread(f'{path}/{directory}/{img}', cv2.IMREAD_UNCHANGED)
-    imageRaw = cv2.cvtColor(image_tiff, cv2.COLOR_BAYER_RG2BGR)
+    imageRaw = cv2.cvtColor(image_tiff, bayer)
     return imageRaw
 
 
@@ -74,7 +74,7 @@ def load(index, folder_step=100, mask_cube=False, depth=8):
 
 
 def create_valid_set(path='./data/relighted', ratio=0.9):
-    folders = ['images', 'gt', 'img_corrected_1', 'gt_mask']
+    folders = ['images', 'gt', 'img_corrected_1', 'gt_mask', 'ill']
     valid_path = f'{path}/valid'
     if not os.path.exists(valid_path):
         os.mkdir(valid_path)

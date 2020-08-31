@@ -10,6 +10,7 @@ import numpy as np
 import multiprocessing as mp
 import time
 from skimage.filters import gaussian
+import shutil
 
 def saveImage(image, dir, name, convert_rgb_2_bgr=True, scale=True):
     if not os.path.exists(dir):
@@ -213,20 +214,20 @@ def debayer():
 def combine_for_training(fax, tiff, append):
     path = 'G:\\fax\\diplomski\\Datasets\\third\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
     dirs = ['ambient', 'ambient3', 'ambient4', 'processed', 'realworld', 'ambient6']
-    # path = 'G:\\fax\\diplomski\\Datasets\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
-    # dirs = ['third\\realworld', 'realworld']
+    path = 'F:\\fax\\diplomski\\Datasets\\' if not fax else '/media/donik/Jolteon/fax/diplomski/Datasets/third/'
+    dirs = ['realworld']
     if tiff:
         dirs = list(map(lambda x: x+'_tiff', dirs))
-    images_path = '/relighted/images'
-    gt_path = '/relighted/gt'
-    img1_path = '/relighted/img_corrected_1'
-    gt_mask_path = '/relighted/gt_mask'
+    images_path = '/images'
+    gt_path = '/gt'
+    img1_path = '/img_corrected_1'
+    gt_mask_path = '/gt_mask'
 
     if tiff:
-        dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined_tiff_relighted\\' if not fax else '/media/donik/Disk/combined_tiff/'
+        dest = 'F:\\fax\\diplomski\\Datasets\\third\\combined_tiff_relighted\\' if not fax else '/media/donik/Disk/combined_tiff/'
     else:
         # dest = 'G:\\fax\\diplomski\\Datasets\\realworld_combined\\' if not fax else '/media/donik/Disk/combined/'
-        dest = 'G:\\fax\\diplomski\\Datasets\\third\\combined\\' if not fax else '/media/donik/Disk/combined/'
+        dest = 'F:\\fax\\diplomski\\Datasets\\third\\combined_tiff_relighted\\' if not fax else '/media/donik/Disk/combined/'
 
     gts = []
     pos = []
@@ -242,7 +243,7 @@ def combine_for_training(fax, tiff, append):
         print(dir)
         image_names = os.listdir(path+dir+images_path)
         gts_old = np.loadtxt(f'{path+dir}/gt.txt')
-        cube = np.loadtxt(f'{path+dir}/cube.txt')
+        cube = np.loadtxt(f'{path+dir}/pos.txt')
         for name in image_names:
             idx = int(name[:-4]) - 1
 
@@ -260,19 +261,24 @@ def combine_for_training(fax, tiff, append):
             # saveImage(img1, dest+'img_corrected_1', str(name_idx), True)
             # saveImage(gt_mask, dest + 'gt_mask', str(name_idx), True)
 
-            os.rename(path+dir+images_path+"/"+name, dest+'images/'+str(name_idx) + '.png')
-            os.rename(path + dir + gt_path + "/" + name, dest + 'gt/' + str(name_idx) + '.png')
-            os.rename(path + dir + img1_path + "/" + name, dest + 'img_corrected_1/' + str(name_idx) + '.png')
-            os.rename(path + dir + gt_mask_path + "/" + name, dest + 'gt_mask/' + str(name_idx) + '.png')
+            shutil.copy(path+dir+images_path+"/"+name, dest+'images/'+str(name_idx) + '.png')
+            shutil.copy(path + dir + gt_path + "/" + name, dest + 'gt/' + str(name_idx) + '.png')
+            shutil.copy(path + dir + img1_path + "/" + name[:-4] + 'r.png', dest + 'img_corrected_1/' + str(name_idx) + '.png')
+            shutil.copy(path + dir + gt_mask_path + "/" + name[:-4] + 'r.png', dest + 'gt_mask/' + str(name_idx) + '.png')
 
             name_idx += 1
-    np.savetxt(f'{dest}/gts.txt', np.array(gts, dtype=np.float32))
-    np.savetxt(f'{dest}/pos.txt', np.array(cube, dtype=int), fmt='%d')
+            if append:
+                f = open(f'{dest}/gts.txt', 'a+')
+                f.write(f'{gt[0]} {gt[1]} {gt[2]} {gt[3]} {gt[4]} {gt[5]}\n')
+                f.close()
+    if not append:
+        np.savetxt(f'{dest}/gts.txt', np.array(gts, dtype=np.float32))
+        np.savetxt(f'{dest}/pos.txt', np.array(cube, dtype=int), fmt='%d')
 
 
 if __name__ == '__main__':
     fax = os.name != 'nt'
-    combine_for_training(fax, True, False)
+    combine_for_training(fax, False, True)
     exit()
     # if fax:
     #     dir = "/media/donik/Jolteon/fax/diplomski/Datasets/third/processed_tiff"

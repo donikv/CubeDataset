@@ -61,7 +61,7 @@ def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desatura
     colored_mask = np.array(
         [[ill1 * pixel + ill2 * (1 - pixel) for pixel in row] for row in mask])
 
-    return True, image_cor, colored_mask, relighted, relighted1, mask
+    return True, image_cor, colored_mask, relighted, relighted1, mask, ill1, ill2
 
 
 def main_process(data):
@@ -69,12 +69,12 @@ def main_process(data):
     folder_step = 200
     draw = False
     save = True
-    use_edges = False
-    use_grad = True
+    use_edges = True
+    use_grad = False
     desaturate = True
-    planckian = False
-    single=True
-    succ, image, colored_mask, relighted, relighted1, mask = process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desaturate, planckian, single)
+    planckian = True
+    single=False
+    succ, image, colored_mask, relighted, relighted1, mask, i1, i2 = process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desaturate, planckian, single)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask, mask], title=img)
@@ -86,6 +86,7 @@ def main_process(data):
                         cv2.cvtColor((mask * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
             cv2.imwrite(f'./data/relighted/img_corrected_1/{name}',
                         cv2.cvtColor(relighted1, cv2.COLOR_RGB2BGR))
+            np.savetxt(f'./data/relighted/ill/{name[:-4]}.txt', np.expand_dims(np.concatenate([i1, i2]), axis=0), fmt='%.7f', newline="")
             print(f'Saved {img}')
     else:
         if draw:
@@ -99,11 +100,12 @@ if __name__ == '__main__':
     gt_folder = "./data/relighted/gt/"
     gt_mask_folder = "./data/relighted/gt_mask/"
     img_cor_folder = "./data/relighted/img_corrected_1/"
-    folders = [img_folder, gt_folder, gt_mask_folder, img_cor_folder]
+    ill_folder = "./data/relighted/ill/"
+    folders = [img_folder, gt_folder, gt_mask_folder, img_cor_folder, ill_folder]
     for img_folder in folders:
         if not os.path.exists(img_folder):
             os.mkdir(img_folder)
-    num_threads = 1
+    num_threads = 8
     if num_threads < 2:
         for data in single_ill_gt:
             main_process(data)
