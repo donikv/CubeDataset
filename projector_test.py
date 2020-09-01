@@ -164,7 +164,7 @@ def par_create(data):
     gt_right[0], gt_right[2] = gt_right[2], gt_right[0]
     gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_right, gt_left, thresh=tresh)
     ggt_mask = gt_mask / 255#pu.denoise_mask(gt_mask)
-    saveImage(ggt_mask, f'{dir}/gt_mask/', idx + 1, False)
+    saveImage(ggt_mask, f'{dir}/gt/', idx + 1, False)
     # gt_mask, ir, il, r = pu.create_gt_mask(image, image_right, image_left, gt_left, gt_right)
     # cv2.imwrite(f'D:\\fax\\Dataset\\ambient/pngs/gt_mask/{idx + 1}lr.png', cv2.cvtColor(gt_mask, cv2.COLOR_RGB2BGR))
 
@@ -278,14 +278,14 @@ def combine_for_training(fax, tiff, append):
 
 if __name__ == '__main__':
     fax = os.name != 'nt'
-    combine_for_training(fax, False, True)
-    exit()
-    # if fax:
-    #     dir = "/media/donik/Jolteon/fax/diplomski/Datasets/third/processed_tiff"
-    # else:
-    #     dir = "projector_test/projector2"
+    # combine_for_training(fax, False, True)
+    # exit()
+    if not fax:
+        dir = "G:/fax/diplomski/Datasets/third/ambient6_tiff"
+    else:
+        dir = "projector_test/projector2"
     # find_gt(dir)
-    # tresh = 1 if dir.endswith('tiff') else 0
-    # create_gt_mask(dir, thresh=tresh)
+    tresh = 1 if dir.endswith('tiff') else 0
+    create_gt_mask(dir, thresh=tresh)
 
 
