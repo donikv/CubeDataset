@@ -6,9 +6,11 @@ import os
 NIKON = 'nikon_d7000'
 CANON = 'canon_550d'
 
+
 def __create_save_location__(save_location):
     if not os.path.exists(save_location):
         os.mkdir(save_location)
+
 
 def save_for_dataset(images:dict, gt:np.ndarray, pos: np.ndarray, root_folder:str, scene_type:str, camera:str, shoot_name:str, image_name:str):
     save_location = root_folder

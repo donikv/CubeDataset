@@ -20,7 +20,7 @@ def load_png(name, path = './data/Cube+', directory='PNG_1_200', mask_cube=True,
     image = f"{path}/{directory}"
     image_path = os.path.join(image, name)
 
-    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)[..., 0:3]
     r, g, b = cv2.split(img)
     rgb = np.dstack((b, g, r))
 

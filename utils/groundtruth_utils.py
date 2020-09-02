@@ -4,6 +4,9 @@ import cv2
 import numpy as np
 
 class GroundtruthLoader:
+    """
+    Class used to load and iterate over the groundtruth values in the given text file.
+    """
 
     def __init__(self, name, path = './data/Cube+'):
         self.name = name

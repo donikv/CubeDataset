@@ -8,38 +8,6 @@ def xyz_from_xy(x, y):
     return np.array((x, y, 1-x-y))
 
 
-
-def chromacity_planckian(T):
-    u = 0.860117757 + 1.54118254e-4*T + 1.28641212e-7*T*T
-    u /= 1 + 8.42420235e-4*T + 7.08145163e-7*T*T
-
-    v = 0.317398726 + 4.22806245e-5*T + 4.20481691e-8*T*T
-    v /= 1 - 2.89741816e-5*T + 1.61456053e-7*T*T
-
-    return u, v
-
-
-def chrom_to_rgb(uv: tuple):
-    # l = 128
-    u, v = uv
-    #
-    # luv = LuvColor(l, u * 255, v * 255)
-    # rgb = convert_color(luv, sRGBColor)
-    # rgb = np.array([rgb.rgb_r, rgb.rgb_g, rgb.rgb_b])
-    # rgb = rgb / np.linalg.norm(rgb)
-    # return rgb
-    R = u + 2*u*v
-    R /= 1 + u + v
-
-    G = v * (1 + R)
-    G /= 1 + v
-
-    B = np.random.uniform(0, 1, 1)[0]
-
-    rgb = np.array([R, G, B])
-    # rgb = rgb / np.linalg.norm(rgb)
-    return rgb
-
 def angular_distance(a, b):
     a = a / (a[0] + a[1] + a[2])
     b = b / (b[0] + b[1] + b[2])
@@ -47,6 +15,14 @@ def angular_distance(a, b):
 
 
 def random_colors(offset=True, desaturate=True, planckian=True):
+    """
+    Returns two random colors that have an angular distance greater than 6 degrees.
+
+    :param offset: The amount of random normal offset applied to both colors. Ignored if `planckian` is not used.
+    :param desaturate: Boolean used to desaturate the produced random colors.
+    :param planckian: Boolean used to indicate whether the random colors should be sampled from the planckian locus or not.
+    :return: (c1, c2) Tuple with two random colors.
+    """
     lam = np.arange(380., 781., 5)
     illuminant_D65 = xyz_from_xy(0.3127, 0.3291)
     cs_hdtv = ColourSystem(red=xyz_from_xy(0.67, 0.33),

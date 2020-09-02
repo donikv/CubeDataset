@@ -10,6 +10,11 @@ import numpy as np
 import multiprocessing as mp
 
 def get_ill_diffs():
+    """
+    Returns only images from the cube+ dataset that have low angular distance between two illuminants.
+
+    :return: Image indices with small angular distance.
+    """
     gtLoaderL = GroundtruthLoader('cube+_left_gt.txt')
     gtLoaderR = GroundtruthLoader('cube+_right_gt.txt')
 
@@ -26,21 +31,27 @@ def get_ill_diffs():
     return gt_diff_filter
 
 
-def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desaturate, planckian, single):
+def process_with_edges(image, gt, use_edges, use_grad, desaturate, planckian, single):
+    """
+    Synthetically relights images using a given segmentation method.
 
-    image = fu.load(img, folder_step, depth=14)
-    height, width, _ = image.shape
-    image = cv2.resize(image, (int(width / 5), int(height / 5)))
-    image = iu.process_image(image, 14)
-    image_cor = iu.color_correct_single(image, c_ill=1, u_ill=gtLoader[img - 1])
+    :param img: Image to be processed.
+    :param gt: Illumination of the input image.
+    :param use_edges: Indicates whether edge detection is used in contour detection.
+    :param use_grad: Indicates whether a gradient fill will be used on contours.
+    :param desaturate: Indicates whether the input colors should be desaturated.
+    :param planckian: Indicates whether colors should be sampled from the planckian locus or a random sample
+    :param single: Indicates whether the whole image should be relighted or only the insides of the found contours
+    :return: (Success indicator, corrected image, colored mask, relighted image, partially relighted image, contour mask, first illuminant, second illuminant)
+    """
+
+
+    image_cor = iu.color_correct_single(image, c_ill=1, u_ill=gt)
     if use_edges:
         edges, closing = iu.find_edges(image_cor, 10, 10)
         contours, mask, identation_index = iu.cv2_contours(closing, method=-1, upper=np.array([10, 255, 255]), use_grad=use_grad)
     else:
         contours, mask, identation_index = iu.cv2_contours(image_cor, method=1, upper=np.array([10, 255, 255]), invert=True, use_grad=use_grad)
-
-    # if 5 * mask.size / 6 < np.count_nonzero(mask) or np.count_nonzero(mask) < mask.size / 6:
-    #     return False, image, mask, None
 
     if identation_index < 10:
         print(identation_index)
@@ -54,7 +65,7 @@ def process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desatura
             ill1 = np.ones(3)
     relighted = iu.color_correct(image_cor, mask=mask, ill1=1 / ill1, ill2=1 / ill2,
                                  c_ill=1/3 if desaturate else 1/5)
-    p = 0#np.random.random(1)
+    p = 0
     i1, i2 = (ill2/ill1, np.ones(3)) if p > 0.5 else (np.ones(3), ill1/ill2)
     relighted1 = iu.color_correct(image_cor, mask=mask, ill1=i1, ill2=i2,
                                  c_ill=1/3)
@@ -74,7 +85,14 @@ def main_process(data):
     desaturate = True
     planckian = True
     single=False
-    succ, image, colored_mask, relighted, relighted1, mask, i1, i2 = process_with_edges(img, gtLoader, folder_step, use_edges, use_grad, desaturate, planckian, single)
+
+    image = fu.load(img, folder_step, depth=14)
+    height, width, _ = image.shape
+    image = cv2.resize(image, (int(width / 5), int(height / 5)))
+    image = iu.process_image(image, 14)
+    gt = gtLoader[img - 1]
+
+    succ, image, colored_mask, relighted, relighted1, mask, i1, i2 = process_with_edges(image, gt, folder_step, use_edges, use_grad, desaturate, planckian, single)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask, mask], title=img)
