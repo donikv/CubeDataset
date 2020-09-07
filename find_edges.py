@@ -76,7 +76,7 @@ def process_with_edges(image, gt, use_edges, use_grad, desaturate, planckian, si
 
 
 def main_process(data):
-    img, gtLoader = data
+    img = data
     folder_step = 200
     draw = False
     save = True
@@ -85,14 +85,19 @@ def main_process(data):
     desaturate = True
     planckian = True
     single=False
-
-    image = fu.load(img, folder_step, depth=14)
+    image = "/media/donik/Disk/intel_tau" + img + '.tiff'
+    gt = "/media/donik/Disk/intel_tau" + img + '.wp'
+    image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
     height, width, _ = image.shape
-    image = cv2.resize(image, (int(width / 5), int(height / 5)))
-    image = iu.process_image(image, 14)
-    gt = gtLoader[img - 1]
+    # image = cv2.resize(image, (int(width / 5), int(height / 5)))
+    image = iu.process_image(image, 14, blacklevel=0)
+    gt = np.loadtxt(gt, delimiter=',')
+    # print(image)
+    # print(gt)
+    # print(image.shape)
+    # exit(0)
 
-    succ, image, colored_mask, relighted, relighted1, mask, i1, i2 = process_with_edges(image, gt, folder_step, use_edges, use_grad, desaturate, planckian, single)
+    succ, image, colored_mask, relighted, relighted1, mask, i1, i2 = process_with_edges(image, gt, use_edges, use_grad, desaturate, planckian, single)
     if succ:
         if draw:
             pu.visualize([image, relighted, colored_mask, mask], title=img)
@@ -111,23 +116,19 @@ def main_process(data):
             pu.visualize([image, mask], title=img)
 
 if __name__ == '__main__':
-    single_ill = get_ill_diffs()
-    gtLoader = GroundtruthLoader('cube+_gt.txt')
-    single_ill_gt = list(map(lambda x: (x, gtLoader), single_ill))
-    img_folder = './data/relighted/images/'
-    gt_folder = "./data/relighted/gt/"
-    gt_mask_folder = "./data/relighted/gt_mask/"
-    img_cor_folder = "./data/relighted/img_corrected_1/"
-    ill_folder = "./data/relighted/ill/"
+    path = "/media/donik/Disk/intel_tau/paths_field.txt"
+
+    imgs = np.loadtxt(path, dtype="str")
+    img_folder = '/home/donik/tau_relighted/images/'
+    gt_folder = "/home/donik/tau_relighted/gt/"
+    gt_mask_folder = "/home/donik/tau_relighted/gt_mask/"
+    img_cor_folder = "/home/donik/tau_relighted/img_corrected_1/"
+    ill_folder = "/home/donik/tau_relighted/ill/"
     folders = [img_folder, gt_folder, gt_mask_folder, img_cor_folder, ill_folder]
     for img_folder in folders:
         if not os.path.exists(img_folder):
             os.mkdir(img_folder)
-    num_threads = 8
-    if num_threads < 2:
-        for data in single_ill_gt:
-            main_process(data)
-    else:
-        with mp.Pool(num_threads) as p:
-            p.map(main_process, single_ill_gt)
-            print('done')
+    num_threads = 1
+    with mp.Pool(num_threads) as p:
+        p.map(main_process, imgs)
+        print('done')

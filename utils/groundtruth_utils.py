@@ -53,7 +53,7 @@ def prep_img_for_clustering(img: np.ndarray):
 
     # convert to np.float32
     Z = np.float32(Z)
-    mask = (Z > -1) & (Z < 256)
+    mask = (Z > 0) & (Z < 256)
     mask = np.array(list(map(lambda x: x.all(), mask)))
     # print(mask)
     Z = Z[mask]

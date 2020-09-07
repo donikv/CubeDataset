@@ -152,6 +152,40 @@ def color_correct(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
     img_c = combine_images_with_mask(c1, c2, mask)
     return img_c
 
+
+def color_correct_with_colored_mask(img, mask, ill1, ill2, c_ill=1 / 3., is_relighted=False):
+    """
+    Corrects the image for the two illuminants and the mask of illuminant distribution using the Von Kries model.
+
+    :param img: Input image for correction
+    :param mask: Mask of the spatial distribution of the illuminants
+    :param ill1: First unknown illuminant
+    :param ill2: Second unknown illuminant
+    :param c_ill: Canonical illuminant
+    :param is_relighted: Indicates whether the correction is applied in order to correct the image or synthetically relight it.
+    :return: Corrected image
+    """
+    if mask.max() > 1:
+        mask = mask / 255.
+    img1 = mask_image(img, mask)
+    img2 = mask_image(img, 1-mask)
+
+    if img.dtype == np.uint8 or img.dtype == np.int32:
+        c1 = color_correct_single(img1, ill1, c_ill, is_relighted)
+        c2 = color_correct_single(img2, ill2, c_ill, is_relighted)
+    elif img.dtype == np.uint16:
+        c1 = color_correct_single_16(img1, ill1, c_ill, is_relighted)
+        c2 = color_correct_single_16(img2, ill2, c_ill, is_relighted)
+    elif img.dtype == np.float32:
+        c1 = color_correct_single(img1, ill1, c_ill, is_relighted)
+        c2 = color_correct_single(img2, ill2, c_ill, is_relighted)
+    else:
+        raise AssertionError(f"Type {img.dtype} not supported for conversion.")
+
+    img_c = combine_images_with_mask(c1, c2, mask)
+    return img_c
+
+
 def color_correct_single_16(img, u_ill, c_ill=1 / 3., relight=False):
     """
     Corrects the image using the Von Kries model globally for one illuminant. Works on 16-bit unsigned images.
@@ -207,7 +241,7 @@ def color_correct_single(img, u_ill, c_ill=1 / 3., relight=False):
     img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
     img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
     img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
-    return np.where(img.max(axis=2, keepdims=True) > 255, np.ones(img.shape) * 255, img).astype(np.uint8)
+    return np.where(img.max(axis=2, keepdims=True) >= 255, np.ones(img.shape) * 255, img).astype(np.uint8)
 
 
 def mask_image(image, mask, value = 0):
@@ -219,7 +253,8 @@ def mask_image(image, mask, value = 0):
     :param value: Value with which to fill the masked image
     :return: Masked image
     """
-    masked = np.where(mask > 0.5, image, value)
+    mask = np.expand_dims(mask, -1) if len(mask.shape) < 3 else mask
+    masked = np.where(mask > 0.5, image, np.ones_like(image) * value)
     return masked
 
 
@@ -232,6 +267,7 @@ def combine_images_with_mask(image1, image2, mask):
     :param mask: Mask used for combination. Combined image is filled with the first image where the value in the mask is > 0.5 and the second images is used for the rest of the combined image
     :return: Combined image
     """
+    mask = np.expand_dims(mask, -1) if len(mask.shape) < 3 else mask
     combined = np.where(mask > 0.5, image1, image2)
     return combined
 
