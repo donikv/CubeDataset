@@ -9,15 +9,13 @@ import utils.image_utils as iu
 def blackout(data):
     img = data
     pos = np.loadtxt(img+'/cube.txt').astype(int)
-    image = cv2.imread(img+'/img.png', cv2.IMREAD_UNCHANGED)
-    # image = iu.process_image(image, depth=12, blacklevel=0, scale=True) * 255
-    image = image.astype(np.uint8)
-    cb_size = 50
-    # image[pos[1]-cb_size:, pos[0] - cb_size:] = np.zeros(3)
-    # image[pos[3] - cb_size:, pos[2] - cb_size:] = np.zeros(3)
-    image1 = cv2.imread(img+'/img_corrected_1.png', cv2.IMREAD_UNCHANGED)
-    # image1[pos[1]-cb_size:, pos[0] - cb_size:] = np.zeros(3)
-    # image1[pos[3] - cb_size:, pos[2] - cb_size:] = np.zeros(3)
+    image = cv2.imread(img + '/img.png')
+    cb_size = 300
+    image[pos[1]-cb_size:pos[1]+cb_size, pos[0] - cb_size:pos[0] + cb_size] = np.zeros(3)
+    image[pos[3] - cb_size:pos[3] + cb_size, pos[2] - cb_size:pos[2] + cb_size] = np.zeros(3)
+    image1 = cv2.imread(img+'/img_corrected_1.png')
+    image1[pos[1]-cb_size:pos[1]+cb_size, pos[0] - cb_size:pos[0] + cb_size] = np.zeros(3)
+    image1[pos[3] - cb_size:pos[3] + cb_size, pos[2] - cb_size:pos[2] + cb_size] = np.zeros(3)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
     mask = cv2.imread(img+'/gt_mask.png')
     mask = cv2.cvtColor(mask, cv2.COLOR_BGR2HLS)
@@ -39,9 +37,9 @@ def blackout(data):
 
 
 if __name__ == '__main__':
-    path = '/home/donik/tau/list.txt'
+    path = 'D:/fax/Cube2/list.txt'
     images = np.loadtxt(path, str)
-    images = list(filter(lambda x: x.find('realworld')== -1, images))
+    images = list(filter(lambda x: x.find('outdoor2') != -1, images))
     blackout(images[0])
     with mp.Pool(8) as pool:
         masks = pool.map(blackout, images)
