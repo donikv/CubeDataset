@@ -5,14 +5,30 @@ from skimage.filters import gaussian
 
 from utils.plotting_utils import visualize
 
-def process_image(img: np.ndarray, depth=14, blacklevel=2048, scale=False):
+
+def debayer(rggb):
+    red = rggb[:-1:2, :-1:2]
+    green = (rggb[:-1:2, 1::2] + rggb[1::2, 0:-1:2]) / 2.0
+    blue = rggb[1::2, 1::2]
+    img = np.zeros((len(red), len(red[0]), 3))
+    img[:, :, 0] = red
+    img[:, :, 1] = green
+    img[:, :, 2] = blue
+
+    return img
+
+
+def process_image(img: np.ndarray, depth=14, blacklevel=2048, scale=False, blackout=False):
     saturationLevel = img.max() - 2
     img = img.astype(int)
     img = np.clip(img - blacklevel, a_min=0, a_max=np.infty).astype(int)
-    m = np.where(img >= saturationLevel - blacklevel, 1, 0).sum(axis=2, keepdims=True)
-    max_val = np.iinfo(np.int32).max
-    m = np.where(m > 0, [0, 0, 0], [max_val, max_val, max_val])
-    result = cv2.bitwise_and(img, m)
+    if blackout:
+        m = np.where(img >= saturationLevel - blacklevel, 1, 0).sum(axis=2, keepdims=True)
+        max_val = np.iinfo(np.int32).max
+        m = np.where(m > 0, [0, 0, 0], [max_val, max_val, max_val])
+        result = cv2.bitwise_and(img, m)
+    else:
+        result = img
     if scale:
         return (result / 2 ** depth).astype(np.float32)
     else:
@@ -202,7 +218,7 @@ def color_correct_single_16(img, u_ill, c_ill=1 / 3., relight=False):
     img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
     img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
     img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
-    return np.where(img.max(axis=2, keepdims=True) > 65535, np.ones(img.shape) * 65535, img).astype(np.uint16)
+    return np.where(img.max(axis=2, keepdims=True) > 65535, np.zeros(img.shape) * 65535, img).astype(np.uint16)
 
 
 def color_correct_single_f32(img, u_ill, c_ill=1 / 3., relight=False):
@@ -221,7 +237,7 @@ def color_correct_single_f32(img, u_ill, c_ill=1 / 3., relight=False):
     img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
     img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
     img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
-    return np.where(img.max(axis=2, keepdims=True) > 1, np.ones(img.shape), img).astype(np.float32)
+    return np.where(img.max(axis=2, keepdims=True) > 1, np.zeros(img.shape), img).astype(np.float32)
 
 
 
@@ -241,7 +257,7 @@ def color_correct_single(img, u_ill, c_ill=1 / 3., relight=False):
     img[:, :, 0] = img[:, :, 0] * c_ill / u_ill[0]
     img[:, :, 1] = img[:, :, 1] * c_ill / u_ill[1]
     img[:, :, 2] = img[:, :, 2] * c_ill / u_ill[2]
-    return np.where(img.max(axis=2, keepdims=True) >= 255, np.ones(img.shape) * 255, img).astype(np.uint8)
+    return np.where(img.max(axis=2, keepdims=True) >= 255, np.zeros(img.shape) * 255, img).astype(np.uint8)
 
 
 def mask_image(image, mask, value = 0):

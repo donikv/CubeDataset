@@ -5,6 +5,7 @@ import os
 
 NIKON = 'nikon_d7000'
 CANON = 'canon_550d'
+PIXEL = 'pixel_4'
 
 
 def __create_save_location__(save_location):

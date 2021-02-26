@@ -10,18 +10,6 @@ import utils.projector_utils as pu
 import utils.plotting_utils as plt
 
 
-def debayer(rggb):
-    red = rggb[:-1:2, :-1:2]
-    green = (rggb[:-1:2, 1::2] + rggb[1::2, 0:-1:2]) / 2.0
-    blue = rggb[1::2, 1::2]
-    img = np.zeros((len(red), len(red[0]), 3))
-    img[:, :, 0] = red
-    img[:, :, 1] = green
-    img[:, :, 2] = blue
-
-    return img
-
-
 def combine(im1, im2, gt1, gt2, a, b, gto=None):
 
     imi = np.indices(im1.shape[:-1])

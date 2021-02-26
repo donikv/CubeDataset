@@ -30,7 +30,7 @@ def load_and_get_gt(path, idx, tiff):
     gt2 = im[y2-3:y2+3, x2-3:x2+3].mean(axis=1).mean(axis=0)
     gt2 = np.clip(gt2, 0.001, 1)
 
-    return im, gt1, gt2, np.array([x1, y1, x2, y2])
+    return im, gt1, gt2
 
 
 def color_mask(path, idx, size=None, gts=None):
@@ -63,68 +63,44 @@ def correct_with_mask(path, idx):
     return imgc, img, mask
 
 if __name__ == '__main__':
-    import time
-    start = time.time_ns()
-    path = '/Volumes/Jolteon/fax/to_process'
+    path = 'C:/Users/Donik/Desktop/to_process/nikon'
     idx = 3
     sizes = []
-    os.makedirs(path + '/organized', exist_ok=True)
 
-    for idx in range(0, 100):
-        i_path = path + '/organized' + f'/{idx+1}'
-        os.makedirs(i_path, exist_ok=True)
-        try:
-            im, gt1, gt2, pos = load_and_get_gt(path, idx, tiff=True)
-        except:
-            continue
+    for idx in range(0, 43):
+        im, gt1, gt2 = load_and_get_gt(path, idx, tiff=True)
         gt1 = gt1 / gt1.sum()
         gt2 = gt2 / gt2.sum()
-        size = tuple(reversed(im.shape[0:2]))
-        sizes.append(size)
-        
-        np.savetxt(i_path + '/gt.txt', np.concatenate([gt1, gt2], axis=-1).reshape((1, -1)))
-        np.savetxt(i_path + '/cube.txt', pos.reshape((1, -1)), fmt="%d")
-
-        gt = color_mask(path, idx, size=size, gts=[gt1, gt2])
-        gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(i_path + f'/gt.png', gt)
+        sizes.append(tuple(reversed(im.shape[0:2])))
 
         im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
         # gt = color_mask(path, idx, (gt1, gt2))
         # gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(i_path + f'/img.png', (im * 2**14).astype(np.uint16))
+        cv2.imwrite(path + f'/images/{idx + 1}.png', (im * 65535).astype(np.uint16))
         # cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
-        
+
+        f = open(path+'/gt.txt', 'a+')
+        f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
+        f.close()
+    gts = np.loadtxt(path + '/gt.txt').reshape(-1, 2, 3)
+    #
+    for idx in range(0, 10):
+        gt = color_mask(path, idx, size=sizes[idx], gts=None)
+        gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
+
+    # for idx in range(0, 34):
+        imgc, img, mask = correct_with_mask(path, idx)
+        imgc1 = iu.color_correct_single_f32(img, gts[idx][0], c_ill=1/3)
+        # plt.visualize([img, imgc, mask, imgc1])
+        # imgc = imgc.astype(np.float32)
+        # imgc = cv2.cvtColor(imgc, cv2.COLOR_RGB2BGR)
+        # cv2.imwrite(path + f'/corrected/{idx + 1}.png', imgc * 255)
+
         gt_mask = cv2.imread(path + f'/{idx+1}m.png', cv2.IMREAD_UNCHANGED)
-        gt_mask = cv2.resize(gt_mask, size, interpolation=cv2.INTER_NEAREST)
+        gt_mask = cv2.resize(gt_mask, sizes[idx], interpolation=cv2.INTER_NEAREST)
         gt_mask = np.where(gt_mask < 128, 0, 255)#cv2.threshold(gt_mask, 128, 255, cv2.THRESH_BINARY)
-        cv2.imwrite(i_path + f'/gt_mask.png', gt_mask)
-
-    end = time.time_ns()
-    print((end - start) // 10**6)
-
-#         f = open(path+'/gt.txt', 'a+')
-#         f.write(f'{gt1[0]} {gt1[1]} {gt1[2]} {gt2[0]} {gt2[1]} {gt2[2]}\n')
-#         f.close()
-#     gts = np.loadtxt(path + '/gt.txt').reshape(-1, 2, 3)
-#     #
-#     for idx in range(0, 42):
-#         gt = color_mask(path, idx, size=sizes[idx], gts=None)
-#         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-#         cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
-# 
-#     # for idx in range(0, 34):
-#         imgc, img, mask = correct_with_mask(path, idx)
-#         imgc1 = iu.color_correct_single_f32(img, gts[idx][0], c_ill=1/3)
-#         # plt.visualize([img, imgc, mask, imgc1])
-#         # imgc = imgc.astype(np.float32)
-#         # imgc = cv2.cvtColor(imgc, cv2.COLOR_RGB2BGR)
-#         # cv2.imwrite(path + f'/corrected/{idx + 1}.png', imgc * 255)
-# 
-#         gt_mask = cv2.imread(path + f'/{idx+1}m.png', cv2.IMREAD_UNCHANGED)
-#         gt_mask = cv2.resize(gt_mask, sizes[idx], interpolation=cv2.INTER_NEAREST)
-#         gt_mask = np.where(gt_mask < 128, 0, 255)#cv2.threshold(gt_mask, 128, 255, cv2.THRESH_BINARY)
-#         imgc1 = imgc1.astype(np.float32)
-#         imgc1 = cv2.cvtColor(imgc1, cv2.COLOR_RGB2BGR)
-#         cv2.imwrite(path + f'/img_corrected_1/{idx+1}.png', (imgc1*65535).astype(np.uint16))
-#         cv2.imwrite(path + f'/gt_mask/{idx+1}.png', gt_mask)
+        imgc1 = imgc1.astype(np.float32)
+        imgc1 = cv2.cvtColor(imgc1, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(path + f'/img_corrected_1/{idx+1}.png', (imgc1*65535).astype(np.uint16))
+        cv2.imwrite(path + f'/gt_mask/{idx+1}.png', gt_mask)

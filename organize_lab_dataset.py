@@ -5,10 +5,10 @@ import numpy as np
 import cv2
 
 if __name__ == '__main__':
-    path = 'C:/Users/Donik/Desktop/'
-    dirs = ['to_process']
-    new_dirs=['outdoor2']
-    root = 'D:/fax/Cube2'
+    path = 'C:/Users/Donik/Desktop/to_process/'
+    dirs = ['indoor']
+    new_dirs=['realworld2']
+    root = 'D:/fax/Cube2/'
 
     # dirs = list(map(lambda x: x+'_tiff', dirs))
     images_path = '/images'
@@ -24,14 +24,14 @@ if __name__ == '__main__':
         cube = np.loadtxt(f'{path+dir}/pos.txt').astype(int)
         i = 0
         for name in image_names:
-            idx = int(name[:-4]) - 1
+            idx = int(name[:-4])
 
-            gt = gts_old[idx]
+            gt = gts_old[idx-1]
             gtl, gtr = gt[:3], gt[3:]
             gtl = gtl / np.max(gtl)
             gtr = gtr / np.max(gtr)
             gt = np.concatenate([gtl, gtr], 0)
-            cb_pos = cube[idx]
+            cb_pos = cube[idx-1]
 
             x1, y1, x2, y2 = cb_pos
 
@@ -43,7 +43,9 @@ if __name__ == '__main__':
 
             images = {'img.png':img, 'gt.png':gt_img, 'img_corrected_1.png':img1, 'gt_mask.png':gt_mask}
             # images = {'img.png': img, 'gt.png': gt_mask}
-            save_location = su.save_for_dataset(images, gt, cb_pos, root, "outdoor", su.NIKON, new_dirs[di], str(i))
+            # camera = 'CANON_5DSR' if nm.startswith('C') else ('NIKON_D810' if nm.startswith('N') else 'SONY_IMX135')
+            camera = su.NIKON
+            save_location = su.save_for_dataset(images, gt, cb_pos, root, "indoor", camera, new_dirs[di], str(i+1))
             save_locations.append(save_location)
             i += 1
 

@@ -105,19 +105,50 @@ def crop(image, rect, black_out=True):
     return image
 
 
-def create_gt_mask(image, image_right, image_left, gt_right, gt_left, allwhite=None, thresh=0):
+def get_one_ill_from_combination(gt1, gtc, image_single, image_combined, cube_position, offset=50, epsilon=1e-8):
+    a, b = gt1, gtc
+
+    a = image_single[cube_position[0] - offset: cube_position[0] + offset, cube_position[1] - offset:cube_position[1] + offset]
+    b = image_combined[cube_position[0] - offset: cube_position[0] + offset, cube_position[1] - offset:cube_position[1] + offset]
+    a = a / a.max(axis=-1, keepdims=True)
+    b = b / b.max(axis=-1, keepdims=True)
+
+    p1 = np.linalg.norm(image_single, ord=2, axis=-1, keepdims=True)
+    p = np.linalg.norm(image_combined, ord=2, axis=-1, keepdims=True)
+    p2 = p - p1
+    r = (p1 / p)
+    r = np.concatenate([r,r,r], axis=-1)
+
+    p1 = p1[cube_position[0] - offset: cube_position[0] + offset, cube_position[1] - offset:cube_position[1] + offset]
+    p = p[cube_position[0] - offset: cube_position[0] + offset, cube_position[1] - offset:cube_position[1] + offset]
+
+    r1 = p1 / (p + epsilon)
+    r2 = 1 - r1
+
+    x = (b - a * r1) / r2
+    x = x / x.max(axis=-1, keepdims=True)
+    x = np.median(x, axis=[0,1])
+
+    return x, p2, r
+
+
+def create_gt_mask(image, image_right, image_left, gt_right, gt_left, allwhite=None, thresh=0, r=None):
     image = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_RGB2HLS)
 
     gt_left, gt_right = gt_left / gt_left.sum(), gt_right / gt_right.sum()
-    img_right_norm = (image_right * 3 / np.sqrt(3)).astype(np.uint8)
-    img_right_norm = cv2.cvtColor(img_right_norm, cv2.COLOR_RGB2HLS) #dodano
-    img_right_norm[:, :, 1] = np.where(img_right_norm[:, :, 1] < thresh, 0, img_right_norm[:, :, 1])
+    if r is None:
+        img_right_norm = (image_right * 3 / np.sqrt(3)).astype(np.uint8)
+        img_right_norm = cv2.cvtColor(img_right_norm, cv2.COLOR_RGB2HLS) #dodano
+        img_right_norm[:, :, 1] = np.where(img_right_norm[:, :, 1] < thresh, 0, img_right_norm[:, :, 1])
 
-    img_left_norm = (image_left * 3 / np.sqrt(3)).astype(np.uint8)
-    img_left_norm = cv2.cvtColor(img_left_norm, cv2.COLOR_RGB2HLS) #dodano
-    img_left_norm[:, :, 1] = np.where(img_left_norm[:, :, 1] < thresh, 0, img_left_norm[:, :, 1])
+        img_left_norm = (image_left * 3 / np.sqrt(3)).astype(np.uint8)
+        img_left_norm = cv2.cvtColor(img_left_norm, cv2.COLOR_RGB2HLS) #dodano
+        img_left_norm[:, :, 1] = np.where(img_left_norm[:, :, 1] < thresh, 0, img_left_norm[:, :, 1])
 
-    r = img_right_norm / (img_left_norm + img_right_norm)
+        r = img_right_norm / (img_left_norm + img_right_norm)
+    else:
+        img_right_norm = None
+        img_left_norm = None
     r = r.clip(0, 1)
     mn = r[:, :, 1]
     r[:, :, 0], r[:, :, 1], r[:, :, 2] = mn, mn, mn

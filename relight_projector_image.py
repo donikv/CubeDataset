@@ -40,12 +40,12 @@ def load_and_correct(path, idx, type):
         iml = iml / 2 ** 16
         imr = imr / 2 ** 16
     else:
-        iml = iu.process_image(iml, depth=14, blacklevel=0, scale=True)
-        imr = iu.process_image(imr, depth=14, blacklevel=0, scale=True)
+        iml = iu.process_image(iml, depth=14, blacklevel=2048, scale=True)
+        imr = iu.process_image(imr, depth=14, blacklevel=2048, scale=True)
 
     x1, y1, x2, y2 = np.loadtxt(path+'/cube.txt').astype(int)[idx]
-    gt1 = np.loadtxt(path + '/gt_right.txt')[idx]
-    gt2 = np.loadtxt(path + '/gt_left.txt')[idx]
+    gt1 = np.loadtxt(path + '/gt_direct.txt')[idx]
+    gt2 = np.loadtxt(path + '/gt_ambient.txt')[idx]
     # gt1 = imr[y1-10:y1+10, x1-10:x1+10].mean(axis=1).mean(axis=0)
     gt1 = np.clip(gt1, 0.001, 1)
     gt1 /= gt1.max()
@@ -86,7 +86,7 @@ def load_tiff(img, path, directory):
 
 
 if __name__ == '__main__':
-    path = 'G:\\fax\\diplomski\\Datasets\\third\\ambient5_tiff'
+    path = '/media/donik/Disk/third/realworld_tiff'
     images = os.listdir(path + '/both/images')
     # current_relighted_images = os.listdir(path + '/relighted/images/')
     # current_relighted_idxs = list(map(lambda x: int(x[:-4]), current_relighted_images))
@@ -96,7 +96,7 @@ if __name__ == '__main__':
         a = image.rfind(".")
         idx = int(image[:a]) - 1
 
-        iml, imr, imlnc, imrnc, c = load_and_correct(path, idx, type=PNG_LAB)
+        iml, imr, imlnc, imrnc, c = load_and_correct(path, idx, type=PNG_RW)
         gts.append(c)
         # c = ru.random_colors(desaturate=False)
         im, imlc, imrc = combine(iml, imr, None)
@@ -106,20 +106,21 @@ if __name__ == '__main__':
 
         plt.visualize([imr, imlnc, imc1, np.round(r)])
 
-        # im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-        # imc1 = cv2.cvtColor(imc1, cv2.COLOR_RGB2BGR)
+        im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+        imc1 = cv2.cvtColor(imc1, cv2.COLOR_RGB2BGR)
         # gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
-        # im = (im * 2**16).astype(np.uint16)
+        im = (im * 2**16).astype(np.uint16)
         imc1 = (imc1 * 2 ** 16).astype(np.uint16)
         r = (r * 255).astype(np.uint8)
 
         img_idx = img_idx
-        # cv2.imwrite(path + f'/relighted/images/{img_idx + 1}.png', im)
-        # cv2.imwrite(path + f'/relighted/gt/{img_idx + 1}.png', gt)
+        cv2.imwrite(path + f'/relighted/images/{img_idx + 1}.png', im)
+        cv2.imwrite(path + f'/relighted/gt/{img_idx + 1}.png', gt)
         cv2.imwrite(path + f'/gt_mask/{idx + 1}.png', r)
         cv2.imwrite(path + f'/img_corrected_1/{idx + 1}.png', imc1)
+        cv2.imwrite(path + f'/img_corrected/{idx + 1}.png', im)
 
-        # f = open(path+'/gt.txt', 'a+')
-        # f.write(f'{c[0][0]} {c[0][1]} {c[0][2]} {c[1][0]} {c[1][1]} {c[1][2]}\n')
-        # f.close()
+        f = open(path+ f'/ill/{idx + 1}.txt', 'w')
+        f.write(f'{c[0]} {c[1]} {c[2]} {c[3]} {c[4]} {c[5]}\n')
+        f.close()
     np.savetxt(path+'/gt.txt', np.array(gts))
