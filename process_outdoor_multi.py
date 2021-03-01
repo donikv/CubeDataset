@@ -11,18 +11,19 @@ import utils.plotting_utils as plt
 from matplotlib.path import Path
 
 def get_gt_from_cube_triangle(verts, image, size):
-    verts = verts.reshape((-1,2))
+    verts = np.flip(verts.reshape((-1,2)), axis=-1)
     x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))  # make a canvas with coordinates
     x, y = x.flatten(), y.flatten()
     points = np.vstack((x, y)).T
 
     p = Path(verts)  # make a polygon
     grid = p.contains_points(points)
-    mask = grid.reshape(size)
+    mask = grid.reshape((*size, 1))
+    mask = np.concatenate([mask, mask, mask], axis=-1)
 
-    masked_image = np.ma.masked_where(mask, image)
-    gt =  masked_image.mean(axis=0).mean(axis=0)
-    return gt
+    masked_image = np.ma.masked_where(~mask, image)
+    gt = np.ma.mean(masked_image, axis=(0,1))
+    return np.clip(gt, 1, 2**14-1)
 
 
 def load_and_get_gt(path, idx, tiff):
@@ -32,31 +33,22 @@ def load_and_get_gt(path, idx, tiff):
     else:
         im = load_tiff(name + '.tiff', path, directory='')
 
-    im = iu.process_image(im, depth=14, scale=True, blacklevel=0)
 
-    poss = np.loadtxt(path + '/pos.txt').astype(int)
-    poss = list(filter(lambda x: x[0] == idx + 1, poss))[0]
-    idx = poss[0]
-    xs, ys = poss[-2], poss[-1]
-    shs = poss[1:-2]
-    if tiff:
-        xs = xs // 2
-        ys = ys // 2
-        shs = shs // 2
+    tris = np.loadtxt(path + f'/{name}.txt').astype(int) // 2
     gtshs = []
-    for i in range(len(shs) // 2):
-        x2, y2 = shs[i], shs[i+1]
-        gt2 = im[y2 - 2:y2 + 2, x2 - 2:x2 + 2].mean(axis=1).mean(axis=0)
-        gt2 = np.clip(gt2, 0.001, 1)
-        gtshs.append(gt2)
-
+    for tri in tris[:-1]:
+        gtshs.append(get_gt_from_cube_triangle(tri, im, im.shape[0:2]))
     gtshs = np.array(gtshs)
+    gtshs = gtshs / gtshs.sum(axis=-1, keepdims=True)
+
     gt2 = gtshs.mean(axis=0)
+    gt2 = gt2 / gt2.sum()
 
-    gt1 = im[ys - 2:ys + 2, xs - 2:xs + 2].mean(axis=1).mean(axis=0)
-    gt1 = np.clip(gt1, 0.001, 1)
+    gt1 = get_gt_from_cube_triangle(tris[-1], im, im.shape[0:2])
+    gt1 = gt1 / gt1.sum()
 
-    return im, gt1, gt2, np.concatenate([gtshs, np.expand_dims(gt1, axis=0)], axis=0), poss[1:] // 2
+    im = iu.process_image(im, depth=14, scale=True, blacklevel=0)
+    return im, gt1, gt2, np.concatenate([gtshs, np.expand_dims(gt1, axis=0)], axis=0), tris
 
 
 def color_mask(path, idx, size=None, gts=None):
@@ -97,25 +89,22 @@ if __name__ == '__main__':
     path = '/Volumes/Jolteon/fax/to_process'
     idx = 3
     sizes = []
-    os.makedirs(path + '/organized', exist_ok=True)
+    os.makedirs(path + '/organized2', exist_ok=True)
 
     for idx in range(0, 100):
-        i_path = path + '/organized' + f'/{idx + 1}'
+        i_path = path + '/organized2' + f'/{idx + 1}'
         os.makedirs(i_path, exist_ok=True)
         im, gt1, gt2, gts, pos = load_and_get_gt(path, idx, tiff=True)
         try:
             pass
         except:
             continue
-        gt1 = gt1 / gt1.sum()
-        gt2 = gt2 / gt2.sum()
-        gts = gts / gts.sum(axis=-1, keepdims=True)
         size = tuple(reversed(im.shape[0:2]))
         sizes.append(size)
 
-        np.savetxt(i_path + '/gt.txt', np.concatenate([gt1, gt2], axis=-1).reshape((1, -1)))
+        np.savetxt(i_path + '/gt.txt', np.concatenate([gt1, gt2], axis=-1).reshape((2, -1)))
         np.savetxt(i_path + '/gts.txt', gts)
-        np.savetxt(i_path + '/cube.txt', pos.reshape((1, -1)), fmt="%d")
+        np.savetxt(i_path + '/cube.txt', pos, fmt="%d")
 
         gt = color_mask(path, idx, size=size, gts=[gt1, gt2])
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
