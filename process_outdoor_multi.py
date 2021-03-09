@@ -10,11 +10,11 @@ import utils.projector_utils as pu
 import utils.plotting_utils as plt
 from matplotlib.path import Path
 
-def get_gt_from_cube_triangle(verts, image, size):
+def get_gt_from_cube_triangle(verts, image, size, return_mask=False):
     verts = np.flip(verts.reshape((-1,2)), axis=-1)
-    x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))  # make a canvas with coordinates
+    x, y = np.meshgrid(np.arange(size[1]), np.arange(size[0]))  # make a canvas with coordinates
     x, y = x.flatten(), y.flatten()
-    points = np.vstack((x, y)).T
+    points = np.vstack((y, x)).T
 
     p = Path(verts)  # make a polygon
     grid = p.contains_points(points)
@@ -23,7 +23,7 @@ def get_gt_from_cube_triangle(verts, image, size):
 
     masked_image = np.ma.masked_where(~mask, image)
     gt = np.ma.mean(masked_image, axis=(0,1))
-    return np.clip(gt, 1, 2**14-1)
+    return np.clip(gt, 1, 2**14-1) if not return_mask else (np.clip(gt, 1, 2**14-1), mask)
 
 
 def load_and_get_gt(path, idx, tiff):
@@ -35,7 +35,11 @@ def load_and_get_gt(path, idx, tiff):
 
 
     tris = np.loadtxt(path + f'/{name}.txt').astype(int) // 2
+    tris_corr = np.array([[8, 10, 8, 10, 8, 10]]) // 2
+
+    tris = tris + tris_corr
     gtshs = []
+    # imr = cv2.resize(im, (4928, 3264), interpolation=cv2.INTER_NEAREST)
     for tri in tris[:-1]:
         gtshs.append(get_gt_from_cube_triangle(tri, im, im.shape[0:2]))
     gtshs = np.array(gtshs)
@@ -60,7 +64,7 @@ def color_mask(path, idx, size=None, gts=None):
         idx = idx if idx < 7 else idx - 1
         gts = np.loadtxt(path + '/gt.txt')[idx].reshape(2, 3)
 
-    cm = (np.where(mask == 0, gts[1], gts[0]) * 255).astype(np.uint8)
+    cm = (np.where(mask == 0, gts[0], gts[1]) * 255).astype(np.uint8)
     return cm
 
 
@@ -89,12 +93,12 @@ if __name__ == '__main__':
     path = '/Volumes/Jolteon/fax/to_process'
     idx = 3
     sizes = []
-    os.makedirs(path + '/organized2', exist_ok=True)
+    os.makedirs(path + '/organized', exist_ok=True)
 
     for idx in range(0, 100):
-        i_path = path + '/organized2' + f'/{idx + 1}'
+        i_path = path + '/organized' + f'/{idx + 1}'
         os.makedirs(i_path, exist_ok=True)
-        im, gt1, gt2, gts, pos = load_and_get_gt(path, idx, tiff=True)
+        im, gtsun, gtshadow, gts, pos = load_and_get_gt(path, idx, tiff=True)
         try:
             pass
         except:
@@ -102,11 +106,11 @@ if __name__ == '__main__':
         size = tuple(reversed(im.shape[0:2]))
         sizes.append(size)
 
-        np.savetxt(i_path + '/gt.txt', np.concatenate([gt1, gt2], axis=-1).reshape((2, -1)))
+        np.savetxt(i_path + '/gt.txt', np.concatenate([gtsun, gtshadow], axis=-1).reshape((2, -1)))
         np.savetxt(i_path + '/gts.txt', gts)
         np.savetxt(i_path + '/cube.txt', pos, fmt="%d")
 
-        gt = color_mask(path, idx, size=size, gts=[gt1, gt2])
+        gt = color_mask(path, idx, size=size, gts=[gtsun, gtshadow])
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)
         cv2.imwrite(i_path + f'/gt.png', gt)
 

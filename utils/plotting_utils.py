@@ -32,6 +32,7 @@ def visualize(images, custom_transform=lambda x: x, title=None, titles=None, out
 
     if out_file is not None:
         plt.savefig(out_file, bbox_inches='tight')
+    plt.tight_layout()
     plt.show()
 
 
