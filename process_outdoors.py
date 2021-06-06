@@ -65,12 +65,12 @@ def correct_with_mask(path, idx):
 if __name__ == '__main__':
     import time
     start = time.time_ns()
-    path = '/Volumes/Jolteon/fax/to_process'
+    path = '/Volumes/Jolteon/fax/raws5_night'
     idx = 3
     sizes = []
     os.makedirs(path + '/organized', exist_ok=True)
 
-    for idx in range(0, 100):
+    for idx in range(0, 20):
         i_path = path + '/organized' + f'/{idx+1}'
         os.makedirs(i_path, exist_ok=True)
         try:

@@ -25,6 +25,22 @@ def get_gt_from_cube_triangle(verts, image, size, return_mask=False):
     gt = np.ma.mean(masked_image, axis=(0,1))
     return np.clip(gt, 1, 2**14-1) if not return_mask else (np.clip(gt, 1, 2**14-1), mask)
 
+def calculate_covers(triangles, shape):
+    cubes = []
+    for verts in triangles:
+        verts = verts.reshape((-1,2))
+        center = verts.mean(axis=0)
+        o = 0
+        for j in range(len(verts)):
+            o += np.linalg.norm(verts[j] - verts[(j+1)%len(verts)])
+        x1 = np.maximum(center[0] - o, 0)
+        y1 = np.maximum(center[1] - o/2, 0)
+        x2 = np.minimum(center[0] + o, shape[1])
+        y2 = np.minimum(center[1] + o, shape[0])
+        cube = np.array([x1,y1,x2,y2])
+        cubes.append(cube)
+    return np.array(cubes)
+
 
 def load_and_get_gt(path, idx, tiff):
     name = str(idx + 1)
@@ -35,24 +51,29 @@ def load_and_get_gt(path, idx, tiff):
 
 
     tris = np.loadtxt(path + f'/{name}.txt').astype(int) // 2
-    tris_corr = np.array([[8, 10, 8, 10, 8, 10]]) // 2
+    tris = tris[0::2]
+    # covers = np.loadtxt(path + f'/{name}c.txt').astype(int) // 2
+    tris_corr = np.tile(np.array([8,10]), tris.shape[-1] // 2)
+    # tris_corr = np.array([[8, 10, 8, 10, 8, 10, 8, 10]]) // 2
+    # covers = covers + tris_corr[..., 0:4]
 
     tris = tris + tris_corr
+    covers = calculate_covers(tris, im.shape).astype(int)
     gtshs = []
     # imr = cv2.resize(im, (4928, 3264), interpolation=cv2.INTER_NEAREST)
     for tri in tris[:-1]:
         gtshs.append(get_gt_from_cube_triangle(tri, im, im.shape[0:2]))
     gtshs = np.array(gtshs)
-    gtshs = gtshs / gtshs.sum(axis=-1, keepdims=True)
+    gtshs = gtshs / np.linalg.norm(gtshs, axis=-1, keepdims=True, ord=2)
 
     gt2 = gtshs.mean(axis=0)
-    gt2 = gt2 / gt2.sum()
+    gt2 = gt2 / np.linalg.norm(gt2, ord=2)
 
     gt1 = get_gt_from_cube_triangle(tris[-1], im, im.shape[0:2])
-    gt1 = gt1 / gt1.sum()
+    gt1 = gt1 / np.linalg.norm(gt1, ord=2)
 
     im = iu.process_image(im, depth=14, scale=True, blacklevel=0)
-    return im, gt1, gt2, np.concatenate([gtshs, np.expand_dims(gt1, axis=0)], axis=0), tris
+    return im, gt1, gt2, np.concatenate([gtshs, np.expand_dims(gt1, axis=0)], axis=0), tris, covers
 
 
 def color_mask(path, idx, size=None, gts=None):
@@ -90,15 +111,15 @@ if __name__ == '__main__':
     import time
 
     start = time.time_ns()
-    path = '/Volumes/Jolteon/fax/to_process'
+    path = '/Volumes/Jolteon/fax/raws6'
     idx = 3
     sizes = []
     os.makedirs(path + '/organized', exist_ok=True)
 
-    for idx in range(0, 100):
+    for idx in range(1, 77):
         i_path = path + '/organized' + f'/{idx + 1}'
         os.makedirs(i_path, exist_ok=True)
-        im, gtsun, gtshadow, gts, pos = load_and_get_gt(path, idx, tiff=True)
+        im, gtsun, gtshadow, gts, pos, covers = load_and_get_gt(path, idx, tiff=True)
         try:
             pass
         except:
@@ -108,7 +129,8 @@ if __name__ == '__main__':
 
         np.savetxt(i_path + '/gt.txt', np.concatenate([gtsun, gtshadow], axis=-1).reshape((2, -1)))
         np.savetxt(i_path + '/gts.txt', gts)
-        np.savetxt(i_path + '/cube.txt', pos, fmt="%d")
+        np.savetxt(i_path + '/cubes.txt', covers, fmt="%d")
+        np.savetxt(i_path + '/face_endpoints.txt', pos, fmt="%d")
 
         gt = color_mask(path, idx, size=size, gts=[gtsun, gtshadow])
         gt = cv2.cvtColor(gt, cv2.COLOR_RGB2BGR)

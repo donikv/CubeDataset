@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import PolynomialFeatures, MinMaxScaler
+from sklearn.preprocessing import PolynomialFeatures, MinMaxScaler, StandardScaler
 from sklearn.pipeline import Pipeline
 
 from pprint import pprint
@@ -30,23 +30,39 @@ params = {
 
 if __name__ == '__main__':
 
-    grid = GridSearchCV(pipeline, params, n_jobs=-1, verbose=1)
+    # grid = GridSearchCV(pipeline, params, n_jobs=-1, verbose=1)
+    #
+    # print("Performing grid search...")
+    # print("pipeline:", [name for name, _ in pipeline.steps])
+    # print("parameters:")
+    # pprint(params)
+    # t0 = time()
+    # grid.fit(X, Y)
+    # print("done in %0.3fs" % (time() - t0))
+    # print()
+    #
+    # print("Best score: %0.3f" % grid.best_score_)
+    # print("Best parameters set:")
+    # best = grid.best_estimator_
+    # best_parameters = grid.best_estimator_.get_params()
+    # for param_name in sorted(best_parameters.keys()):
+    #     print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
-    print("Performing grid search...")
-    print("pipeline:", [name for name, _ in pipeline.steps])
-    print("parameters:")
-    pprint(params)
-    t0 = time()
-    grid.fit(X, Y)
-    print("done in %0.3fs" % (time() - t0))
-    print()
+    # dump(best, 'data/best_linear_regression2_std.joblib')
+    pipe: Pipeline = load('data/best_linear_regression2.joblib')
+    Xt = pipe.named_steps['minmax'].transform(X)
+    x = Xt[:,2]
+    y = Xt[:,3]
+    z = Xt[:,5]
+    w = pipe.predict(X)
 
-    print("Best score: %0.3f" % grid.best_score_)
-    print("Best parameters set:")
-    best = grid.best_estimator_
-    best_parameters = grid.best_estimator_.get_params()
-    for param_name in sorted(best_parameters.keys()):
-        print("\t%s: %r" % (param_name, best_parameters[param_name]))
+    import matplotlib.pyplot as plt
+    from mpl_toolkits import mplot3d
 
-    dump(best, 'data/best_linear_regression2.joblib')
-
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    plt.xlim((0,1))
+    plt.ylim((0,1))
+    ax.set_zlim((0,1))
+    ax.scatter3D(x, y, z, c=w)
+    plt.show()

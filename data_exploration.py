@@ -10,7 +10,7 @@ import cv2
 #paths = np.loadtxt('/media/donik/Disk/Cube2/list_outdoor.txt', dtype=str)
 #%%
 # path = '/media/donik/Disk/Cube2_new'
-path = '/Volumes/Jolteon/fax/to_process/organized'
+path = '/Volumes/Jolteon/fax/test_angles/organized'
 l = np.loadtxt(f'{path}/list.txt', dtype=str)
 paths = [path + x[1:] for x in l]
 
@@ -22,9 +22,9 @@ def explore_gts(paths):
         gts = np.loadtxt(p + '/gts.txt')
         print("-" * 10)
         print(p)
-        for comb in diff_combination:
-            diff = ru.angular_distance(gts[comb[0]], gts[comb[1]])
-            print(f"{comb} -> {diff}")
+        for i in range(len(gts)-1):
+            diff = ru.angular_distance(gts[0], gts[i+1])
+            print(f"{[0,i+1]} -> {diff}")
             if p not in diffs:
                 diffs[p] = [diff]
             else:
@@ -100,8 +100,9 @@ def get_center_from_verts(verts):
     return center[0], center[1]
 
 
-def get_diff_to_angles(diffs):
-    diff_combination = list(itertools.combinations(range(3), 2))
+def get_diff_to_angles(diffs, diff_combination=None):
+    if diff_combination is None:
+        diff_combination = list(itertools.combinations(range(3), 2))
     xyz = []
     for file, angles in diffs.items():
         coordiantes = np.loadtxt(file + '/cube.txt')
@@ -112,8 +113,9 @@ def get_diff_to_angles(diffs):
             xyz.append([abs(ca1-ca2), abs(cb1-cb2), abs(cc1-cc2), diff])
     return xyz
 
-def get_diff_to_centers(diffs):
-    diff_combination = list(itertools.combinations(range(3), 2))
+def get_diff_to_centers(diffs, diff_combination=None):
+    if diff_combination is None:
+        diff_combination = list(itertools.combinations(range(3), 2))
     xyz = []
     for file, angles in diffs.items():
         coordiantes = np.loadtxt(file + '/cube.txt')
@@ -124,8 +126,9 @@ def get_diff_to_centers(diffs):
             xyz.append([abs(ca1-ca2), abs(cb1-cb2), diff])
     return xyz
 
-def get_diff_to_area(diffs):
-    diff_combination = list(itertools.combinations(range(3), 2))
+def get_diff_to_area(diffs, diff_combination=None):
+    if diff_combination is None:
+        diff_combination = list(itertools.combinations(range(3), 2))
     xyz = []
     for file, angles in diffs.items():
         coordiantes = np.loadtxt(file + '/cube.txt')
@@ -136,8 +139,9 @@ def get_diff_to_area(diffs):
             xyz.append([a1-a2, diff])
     return xyz
 
-def get_diff_to_lum(diffs):
-    diff_combination = list(itertools.combinations(range(3), 2))
+def get_diff_to_lum(diffs, diff_combination=None):
+    if diff_combination is None:
+        diff_combination = list(itertools.combinations(range(3), 2))
     xyz = []
     for file, angles in diffs.items():
         coordiantes = np.loadtxt(file + '/cube.txt')
