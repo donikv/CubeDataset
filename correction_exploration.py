@@ -5,6 +5,7 @@ import utils.plotting_utils as pu
 import utils.relighting_utils as ru
 import numpy as np
 import process_outdoor_multi as pom
+import os
 
 
 def get_white_side_correnction(gray_verts, img):
@@ -32,36 +33,45 @@ def adjust_gamma(image, gamma=1.0):
 	return cv2.LUT(image, table)
 
 path = '/Volumes/Jolteon/fax/raws6/organized'
-# l = np.loadtxt(f'{path}/list.txt', dtype=str)
-# paths = [path + x[1:] for x in l]
-paths = ['/media/donik/Disk/Cube2_new_/outdoor/nikon_d7000/outdoor1/39/', '/media/donik/Disk/Cube2_new_/outdoor/nikon_d7000/outdoor4/20/']
+l = np.loadtxt(f'{path}/list.txt', dtype=str)
+paths = [path + x[1:] for x in l]
+# paths = ['/media/donik/Disk/Cube2_new_/outdoor/nikon_d7000/outdoor1/39/', '/media/donik/Disk/Cube2_new_/outdoor/nikon_d7000/outdoor4/20/']
 
 
-for p in paths:
+bsun = []
+bshadow = []
+
+for i, p in enumerate(paths):
     gts = np.loadtxt(p + '/gt.txt')
-    # verts = np.loadtxt(p + '/face_endpoints.txt')
+    verts = np.loadtxt(p + '/face_endpoints.txt')
+    tris_corr = np.tile(np.array([-8, -10]), verts.shape[-1] // 2)
+    verts = verts + tris_corr
+
     image = fu.load_png("img.png", path=p, directory='', mask_cube=False)
-    gtm = (fu.load_png("gt_mask.png", path=p, directory='', mask_cube=False) - 1) * 255
+    gtm = fu.load_png("gt_mask.png", path=p, directory='', mask_cube=False)
+
+
+    # gtm = (gtm - 1) * 255
 
     # gtmask = fu.load_png("gt_mask2.png", path=p, directory='', mask_cube=False)
     image = iu.process_image(image, 14, 0, scale=True)
 
-    for gt in gts:
-        im = iu.color_correct_single_f32(image.copy(), gt)
-        pu.visualize([adjust_gamma((image * 255).astype("uint8"), 2.2) , adjust_gamma((im * 255).astype("uint8"), 2.2), gtm], in_line=True)
-        pu.visualize([np.broadcast_to(gt[np.newaxis, np.newaxis, :], (im.shape))])
-    pu.visualize([image])
-    # gt_mask = cv2.cvtColor(cv2.imread(p + '/gt.png', cv2.IMREAD_UNCHANGED),cv2.COLOR_BGR2RGB)
-    # gt_mask = cv2.GaussianBlur(gt_mask, (51,51), 100)
-    # images = []
-    # print(p)
-    # for gt, vert in zip(gts, verts):
+    # for gt in gts:
     #     im = iu.color_correct_single_f32(image.copy(), gt)
-    #     corrected_white, mask = get_white_side_correnction(vert, im)
-    #     im = np.ma.masked_where(mask, im).filled(0)
-    #     print(corrected_white, ru.angular_distance(np.ones_like(corrected_white), corrected_white))
-    #     images.append(im * 4)
-    # # images.append(gt_mask)
-    # # images.append(image * 4 / 3 / (gt_mask / gt_mask.sum(axis=-1, keepdims=True)))
-    # pu.visualize(images)
-    # print()
+    #     pu.visualize([adjust_gamma((image * 255).astype("uint8"), 2.2) , adjust_gamma((im * 255).astype("uint8"), 2.2), gtm], in_line=True)
+    #     pu.visualize([np.broadcast_to(gt[np.newaxis, np.newaxis, :], (im.shape))])
+    # pu.visualize([image])
+    gt_mask = cv2.cvtColor(cv2.imread(p + '/gt.png', cv2.IMREAD_UNCHANGED),cv2.COLOR_BGR2RGB)
+    gt_mask = cv2.GaussianBlur(gt_mask, (51,51), 100)
+    images = []
+    print(p)
+    for gt, vert in zip(gts, verts):
+        im = iu.color_correct_single_f32(image.copy(), gt)
+        corrected_white, mask = get_white_side_correnction(vert, im)
+        im = np.ma.masked_where(mask, im).filled(0)
+        print(corrected_white, ru.angular_distance(np.ones_like(corrected_white), corrected_white))
+        images.append(im * 4)
+    # images.append(gt_mask)
+    # images.append(image * 4 / 3 / (gt_mask / gt_mask.sum(axis=-1, keepdims=True)))
+    pu.visualize(images)
+    print()

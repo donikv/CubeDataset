@@ -9,6 +9,18 @@ import utils.relighting_utils as ru
 import utils.projector_utils as pu
 import utils.plotting_utils as plt
 from matplotlib.path import Path
+from copy import copy
+
+def rearange_tris(tris):
+    tris_old = copy(tris)
+    tris_shadow = tris_old[:-2]
+    tris_sun = tris_old[-2:]
+    tris_shadow_gray = tris_shadow[:tris_shadow.shape[0] // 2]
+    tris_shadow_white = tris_shadow[tris_shadow.shape[0] // 2:]
+    tris[0:-2:2] = tris_shadow_gray
+    tris[1:-2:2] = tris_shadow_white
+    tris[-2:] = tris_sun
+    return tris
 
 def get_gt_from_cube_triangle(verts, image, size, return_mask=False):
     verts = np.flip(verts.reshape((-1,2)), axis=-1)
@@ -51,23 +63,35 @@ def load_and_get_gt(path, idx, tiff):
 
 
     tris = np.loadtxt(path + f'/{name}.txt').astype(int) // 2
+    tris = rearange_tris(tris)
     tris = tris[0::2]
     # covers = np.loadtxt(path + f'/{name}c.txt').astype(int) // 2
-    tris_corr = np.tile(np.array([8,10]), tris.shape[-1] // 2)
+    # tris_corr = np.tile(np.array([8,10]), tris.shape[-1] // 2)
     # tris_corr = np.array([[8, 10, 8, 10, 8, 10, 8, 10]]) // 2
     # covers = covers + tris_corr[..., 0:4]
 
-    tris = tris + tris_corr
+    # tris = tris + tris_corr
     covers = calculate_covers(tris, im.shape).astype(int)
     gtshs = []
     # imr = cv2.resize(im, (4928, 3264), interpolation=cv2.INTER_NEAREST)
-    for tri in tris[:-1]:
+    tris_shadows = tris[:-1] if tris.shape[0] % 2 != 0 else (tris[:-1] if tris.shape[0] == 2 else tris[:-2])
+    tris_sun = tris[-1:] if tris.shape[0] % 2 != 0 else (tris[-1:] if tris.shape[0] == 2 else tris[-2:])
+    for tri in tris_shadows:
         gtshs.append(get_gt_from_cube_triangle(tri, im, im.shape[0:2]))
     gtshs = np.array(gtshs)
     gtshs = gtshs / np.linalg.norm(gtshs, axis=-1, keepdims=True, ord=2)
 
     gt2 = gtshs.mean(axis=0)
     gt2 = gt2 / np.linalg.norm(gt2, ord=2)
+
+    gt1 = None
+    for tri in tris_sun:
+        gt_sun = get_gt_from_cube_triangle(tri, im, im.shape[0:2])
+        if gt1 is None:
+            gt1 = gt_sun
+        elif gt1[0] / gt1[2] < gt_sun[0] / gt_sun[2]:
+            gt1 = gt_sun
+
 
     gt1 = get_gt_from_cube_triangle(tris[-1], im, im.shape[0:2])
     gt1 = gt1 / np.linalg.norm(gt1, ord=2)
@@ -79,6 +103,8 @@ def load_and_get_gt(path, idx, tiff):
 def color_mask(path, idx, size=None, gts=None):
     name = str(idx + 1) + 'm'
     mask = fu.load_png(name + '.png', path, '', mask_cube=False)
+    # masks_path = '/Volumes/Jolteon/fax/outdoor/outdoor1/'
+    # mask = cv2.imread(masks_path + f'{idx + 1}/gt_mask.png', cv2.IMREAD_UNCHANGED)[...,:3]
     if size != None:
         mask = cv2.resize(mask, size, interpolation=cv2.INTER_NEAREST)
     if gts is None:
@@ -111,7 +137,7 @@ if __name__ == '__main__':
     import time
 
     start = time.time_ns()
-    path = '/Volumes/Jolteon/fax/raws6'
+    path = '/Volumes/Jolteon/fax/raws6/'
     idx = 3
     sizes = []
     os.makedirs(path + '/organized', exist_ok=True)
@@ -119,9 +145,8 @@ if __name__ == '__main__':
     for idx in range(1, 77):
         i_path = path + '/organized' + f'/{idx + 1}'
         os.makedirs(i_path, exist_ok=True)
-        im, gtsun, gtshadow, gts, pos, covers = load_and_get_gt(path, idx, tiff=True)
         try:
-            pass
+            im, gtsun, gtshadow, gts, pos, covers = load_and_get_gt(path, idx, tiff=True)
         except:
             continue
         size = tuple(reversed(im.shape[0:2]))
@@ -143,6 +168,8 @@ if __name__ == '__main__':
         # cv2.imwrite(path + f'/gt/{idx + 1}.png', gt)
 
         gt_mask = cv2.imread(path + f'/{idx + 1}m.png', cv2.IMREAD_UNCHANGED)
+        # masks_path = '/Volumes/Jolteon/fax/outdoor/outdoor1/'
+        # gt_mask = cv2.imread(masks_path + f'{idx+1}/gt_mask.png', cv2.IMREAD_UNCHANGED)[..., :3]
         gt_mask = cv2.resize(gt_mask, size, interpolation=cv2.INTER_NEAREST)
         gt_mask = np.where(gt_mask < 128, 0, 255)  # cv2.threshold(gt_mask, 128, 255, cv2.THRESH_BINARY)
         cv2.imwrite(i_path + f'/gt_mask.png', gt_mask)

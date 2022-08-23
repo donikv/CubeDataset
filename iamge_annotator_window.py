@@ -162,9 +162,9 @@ class CoordinatesWriter(object):
         self.f.close()
 
 if __name__ == "__main__":
-    d = '/Volumes/Jolteon/fax/raws4/nikon'
+    d = '/Users/donik/Dropbox/Donik/fax/Huawei/notebooks/indoor_test'
     # d = 'C:/Users/Donik/Desktop/raws6/iphone2'
-    for i in range(12, 200):
+    for i in range(1, 5):
         try:
             img_n = d + f'/{i}.NEF'
             img = fu.load_cr2(img_n, pp=True)
